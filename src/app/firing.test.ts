@@ -82,3 +82,10 @@ test('seven additional user-reported firing observations, including one discrepa
   assert.equal(discrepancies[0].bearing, 264.6);
   assert.ok(Math.abs(discrepancies[0].reportedElevation - discrepancies[0].computedElevation - 0.6) < 1e-9);
 });
+
+test('additional field example 250.4° / 11.41 km / 3 charges', () => {
+  const solution = firingSolution({ bearing: 250.4, distanceKm: 11.41, charge: 3 });
+  assert.equal(solution?.bearing, 250.4);
+  assert.equal(solution?.charge, 3);
+  assert.equal(solution?.elevation.toFixed(2), '45.64');
+});
