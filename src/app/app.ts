@@ -244,7 +244,8 @@ export class AppComponent {
     const grid=current?formatGrid(current):null;
     this.reportGrid.set(gridInputFromText(grid??'')??{...EMPTY_GRID});
     this.reportNestGrid.set({...this.nestGrid()});
-    this.reportNestConfirmed.set(Boolean(shot.nestPosition)||this.nestConfirmed());
+    // A historical shot must not inherit the Nest location of a different mission.
+    this.reportNestConfirmed.set(Boolean(shot.nestPosition));
     this.error.set('');this.modal.set('miss');
   }
   setReportMode(mode:string):void{
