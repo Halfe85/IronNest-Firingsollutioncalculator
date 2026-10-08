@@ -56,7 +56,7 @@ export class MapPlotterComponent {
   readonly candidate=computed<PlotCandidate|null>(()=>this.result().candidates[this.selectedIndex()]??this.result().candidates[0]??null);
   readonly firing=computed(()=>{
     const p=this.candidate();if(!p)return null;
-    const charge=selectCharge(p.rangeKm,'low-angle',1,45,[]);
+    const charge=selectCharge(p.rangeKm,'manual',Math.ceil(p.rangeKm/5),45,[]);
     return charge===null?null:{charge,elevation:elevationAt(p.rangeKm,charge)!};
   });
   readonly lines=computed(()=>this.reports().map(r=>{
