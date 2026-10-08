@@ -1,0 +1,151 @@
+<main class="train-layout">
+  <section class="train-workspace">
+    <div class="train-heading">
+      <div><span class="train-kicker">01 // TIME-TARGETED OPERATIONS</span>
+        <h2>Train interception tracker</h2>
+        <p>Use the in-game timetable to predict the moving target's position at impact.</p>
+      </div>
+      <button class="train-reset" type="button" (click)="resetExample()">RESET EXAMPLE</button>
+    </div>
+    <div class="train-tip">Sample: Valle de Mula, the inbound five-car troop train. Every coordinate and time is editable for a different playthrough.</div>
+    <div class="location-grid">
+      <label><span>IRON NEST POSITION</span><input type="text" [value]="nestGrid()" (input)="nestGrid.set($any($event.target).value)" placeholder="C3 1:8"></label>
+      <label><span>MAIN STATION GRID</span><input type="text" [value]="stationGrid()" (input)="stationGrid.set($any($event.target).value)" placeholder="J6 0:4"></label>
+      <label><span>RAIL LINE BEARING FROM STATION</span><input type="text" inputmode="decimal" [value]="railBearing()" (input)="railBearing.set($any($event.target).value)" placeholder="90"></label>
+      <label><span>APPROACH SIDE OF STATION</span><select [value]="approachSide()" (change)="approachSide.set($any($event.target).value)"><option value="bearing">Along listed bearing (090°)</option><option value="opposite">Opposite bearing (270°)</option></select></label>
+    </div>
+    <p class="train-note">Rail alignment is bidirectional. Choose the actual side from which the train approaches; this cannot be inferred from the line bearing alone.</p>
+
+    <div class="train-map-head">
+      <span class="train-kicker">02 // TRACK PLOT</span>
+      @if(calculated().ok){<span class="status-online">TRACK SOLVED</span>}
+    </div>
+    <div class="train-map-scroll" role="region" tabindex="0" aria-label="Scrollable game coordinate map of railway and train">
+      <svg class="train-map" viewBox="0 0 1020 545" role="img" aria-label="Railway waypoints, Iron Nest, station and selected train position">
+        <defs><clipPath id="train-map-clip"><rect x="54" y="37" width="920" height="460"/></clipPath></defs>
+        <rect x="54" y="37" width="920" height="460" fill="#17271e"/>
+        @for(col of columns;track col;let i=$index){
+          <line [attr.x1]="x(i)" [attr.x2]="x(i)" y1="37" y2="497" stroke="#4b5a4c" stroke-width=".8"/>
+          <text [attr.x]="x(i+.5)" y="26" class="train-axis" text-anchor="middle">{{ col }}</text>
+        }
+        @for(row of rows;track row){
+          <line x1="54" x2="974" [attr.y1]="y(row-1)" [attr.y2]="y(row-1)" stroke="#4b5a4c" stroke-width=".8"/>
+          <text x="30" [attr.y]="y(row-.5)+4" class="train-axis" text-anchor="middle">{{ row }}</text>
+        }
+        <line x1="974" x2="974" y1="37" y2="497" stroke="#4b5a4c"/>
+        <line x1="54" x2="974" y1="497" y2="497" stroke="#4b5a4c"/>
+        <g clip-path="url(#train-map-clip)">
+          @if(routeEnd();as start){
+            @if(stationPosition();as station){
+              <line [attr.x1]="x(start.x)" [attr.y1]="y(start.y)"
+                [attr.x2]="x(station.x)" [attr.y2]="y(station.y)"
+                stroke="#d0b68a" stroke-width="7" stroke-dasharray="20 5 2 5"/>
+            }
+          }
+          @for(stop of mapStops();track $index){
+            @if(stop.report;as p){
+              <circle [attr.cx]="x(p.position.x)" [attr.cy]="y(p.position.y)" r="7" fill="#f2d9a4" stroke="#202a1f" stroke-width="2"/>
+              <text [attr.x]="x(p.position.x)+10" [attr.y]="y(p.position.y)-13" class="train-map-label">{{ stop.name }}</text>
+            }
+          }
+          @if(nestPosition();as n){
+            <circle [attr.cx]="x(n.x)" [attr.cy]="y(n.y)" r="10" fill="#85b7d5" stroke="#15221c" stroke-width="3"/>
+            <text [attr.x]="x(n.x)+12" [attr.y]="y(n.y)-12" class="train-map-label">IRON NEST</text>
+          }
+          @if(calculated().ok){
+            @if($any(calculated()).result;as aim){
+              <circle [attr.cx]="x(aim.position.x)" [attr.cy]="y(aim.position.y)" r="16" fill="#e57f66" fill-opacity=".23" stroke="#ff9278" stroke-width="2"/>
+              <path [attr.d]="'M'+(x(aim.position.x)-9)+' '+y(aim.position.y)+'h18 M'+x(aim.position.x)+' '+(y(aim.position.y)-9)+'v18'" stroke="#ffb092" stroke-width="2.5"/>
+              <text [attr.x]="x(aim.position.x)+17" [attr.y]="y(aim.position.y)+19" class="train-target-label">IMPACT POINT</text>
+              @if(nestPosition();as n){
+                <line [attr.x1]="x(n.x)" [attr.y1]="y(n.y)" [attr.x2]="x(aim.position.x)" [attr.y2]="y(aim.position.y)" stroke="#ff9876" stroke-width="2" stroke-dasharray="7 6"/>
+              }
+            }
+          }
+        </g>
+        <text x="965" y="525" class="train-map-footer" text-anchor="end">1 GRID = 1 KM · SUBCELLS = 100 M</text>
+      </svg>
+    </div>
+    <p class="train-note">Map axis convention is provisional. Verify against the in-game map before using a predicted aimpoint.</p>
+
+    <div class="train-stops-heading">
+      <div><span class="train-kicker">03 // MOVEMENT TIMETABLE</span><h3>Reported waypoints</h3></div>
+      <button type="button" class="train-reset" (click)="addWaypoint()">+ WAYPOINT</button>
+    </div>
+    <div class="waypoint-list">
+      @for(stop of stops();track $index;let i=$index;let last=$last){
+        <div class="waypoint-row">
+          <div class="waypoint-num">{{ i+1 }}</div>
+          <label class="waypoint-name"><span>LOCATION</span><input type="text" [value]="stop.name" (input)="setStopName(i,$any($event.target).value)"></label>
+          <label><span>DISTANCE TO STATION (KM)</span><input type="text" inputmode="decimal" [disabled]="last" [value]="stop.kmFromStation" (input)="setStopDistance(i,$any($event.target).value)"></label>
+          <label><span>GAME CLOCK (HH:MM:SS)</span><input type="text" inputmode="numeric" [value]="stop.time" (input)="setStopTime(i,$any($event.target).value)" placeholder="10:06:50"></label>
+          <div class="waypoint-action">
+            @if(!last&&stops().length>2){<button type="button" (click)="removeWaypoint(i)" [attr.aria-label]="'Remove '+stop.name">×</button>}
+            @if(last){<span>ARRIVAL</span>}
+          </div>
+        </div>
+      }
+    </div>
+    @if(checked().error){<p class="train-error">{{ checked().error }}</p>}
+    @if(segmentSpeeds();as speeds){
+      <div class="train-segment-title">SPEED BETWEEN REPORTS</div>
+      <div class="train-speed-list">
+        @for(speed of speeds;track $index){
+          <div><span>{{ stops()[$index].name }} → {{ stops()[$index+1].name }}</span><strong>{{ speed | number:'1.1-1' }} km/h</strong></div>
+        }
+      </div>
+    }
+  </section>
+
+  <aside class="train-result-area">
+    <section class="train-solution">
+      <div class="train-solution-top"><span class="train-kicker">04 // INTERCEPT SOLUTION</span><span class="train-live">PREDICTED</span></div>
+      <h2>Intercept target</h2>
+      <label class="train-field"><span>IMPACT AT</span>
+        <select [value]="impactMode()" (change)="impactMode.set($any($event.target).value)">
+          @for(stop of stops();track $index){<option [value]="$index">{{ stop.name }} — {{ stop.time }}</option>}
+          <option value="custom">Custom game time</option>
+        </select>
+      </label>
+      @if(impactMode()==='custom'){
+        <label class="train-field"><span>GAME IMPACT CLOCK (HH:MM:SS)</span>
+          <input type="text" inputmode="numeric" placeholder="10:11:50" [value]="customImpactClock()" (input)="customImpactClock.set($any($event.target).value)">
+        </label>
+      }
+      @if(calculated().ok){
+        @if($any(calculated()).result;as p){
+          <div class="train-target-block">
+            <div class="train-kicker">TRAIN PREDICTED AT {{ selectedImpact() }}</div>
+            <strong>{{ p.grid || 'OUTSIDE MAP' }}</strong>
+            <span>{{ p.kmFromStation | number:'1.2-2' }} km from station · {{ p.speedKmh | number:'1.1-1' }} km/h</span>
+          </div>
+          <div class="train-metrics">
+            <div><span>BEARING</span><strong>{{ p.bearingFromNest | number:'1.2-2' }}°</strong></div>
+            <div><span>RANGE</span><strong>{{ p.rangeKm | number:'1.2-2' }} km</strong></div>
+            @if(firing();as f){
+              <div><span>CHARGES</span><strong>{{ f.charge }}</strong></div>
+              <div><span>ELEVATION</span><strong>{{ f.elevation | number:'1.2-2' }}°</strong></div>
+            }
+          </div>
+          @if(!p.grid){<p class="train-error">The position falls outside the provisional map boundaries. Confirm approach direction.</p>}
+          @if(!firing()){<p class="train-error">Target outside the six-charge firing range.</p>}
+        }
+      } @else {<p class="train-error">{{ $any(calculated()).error }}</p>}
+      <div class="train-flight">
+        <h3>Fire timing</h3>
+        <p>Flight time must be measured in-game. The elevation formula does not predict flight duration.</p>
+        <label class="train-field"><span>MEASURED PROJECTILE FLIGHT (SECONDS)</span><input type="text" inputmode="decimal" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)" placeholder="e.g. 12.4"></label>
+        @if(launchTime();as fire){
+          <div class="train-launch"><span>FIRE AT GAME TIME</span><strong>{{ fire.display }}</strong>@if(fire.previousDay){<small>PREVIOUS DAY</small>}</div>
+        } @else {
+          <div class="train-launch muted"><span>FIRE TIME</span><strong>NOT CALCULATED</strong></div>
+        }
+        @if(clockError()){<p class="train-error">{{ clockError() }}</p>}
+      </div>
+      <label class="train-field"><span>TARGET DESCRIPTION</span><input type="text" maxlength="50" [value]="targetLabel()" (input)="targetLabel.set($any($event.target).value)"></label>
+      <button class="train-send" type="button" [disabled]="!calculated().ok || !firing()" (click)="transfer()">USE IN FIRING CALCULATOR →</button>
+      @if(notice()){<p class="train-feedback" role="status">{{ notice() }}</p>}
+    </section>
+    <p class="train-disclaimer">This is a fan-made game companion, not real-world ballistics. Calculated train motion is interpolated between observations; route direction and map coordinates remain player-verifiable. The number and length of railcars are not represented until further information is supplied.</p>
+  </aside>
+</main>

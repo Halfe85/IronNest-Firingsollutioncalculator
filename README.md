@@ -66,3 +66,16 @@ Every playthrough can use a different Iron Nest position, spotter positions and 
 Use **Load artillery example** to try the screenshot example with Iron Nest `I6 5:3` and spotters `I10 5:8`, `M7 1:5`, `L1 7:7`. Its first two bearing pairs produce **no valid forward intersection under our currently provisional axis convention**; the third target (6.21 km from Spotter #3 and 5.77 km from Spotter #1) produces *two* candidate cells, `G5 7:3` and `N7 4:7`. This is intentionally flagged rather than assigned a guessed firing solution.
 
 **Map-axis calibration outstanding:** The in-game map artwork/orientation has not been confirmed. A screenshot of the full grid map with compass labels is required to verify the letter/number axis directions before treating these plot solutions as game-accurate. The calculator's artillery elevation math is separate from map orientation.
+
+## Moving targets: train interception
+
+A new **Train tracker** tab ships with the Valle de Mula mission as an editable example:
+
+- Iron Nest `C3 1:8`; station `J6 0:4`; straight rail bearing `090°`.
+- Waypoints at 6 km (`10:06:50`), 4 km (`10:10:10`), and 2 km (`10:13:30`) before station arrival at `10:16:50`.
+- Derived train velocity for this sample is **36 km/h**, or 10 metres/second.
+- Select a waypoint or a custom **game impact time** to interpolate the train position, bearing and range from Iron Nest. Standard powder/elevation calculation follows.
+- Set **which side the train approaches from** (on the listed bearing or opposite): a 090° *rail alignment* does not by itself specify inbound direction.
+- Enter separately **measured in-game projectile flight time** to obtain the game-clock fire time. The simulator's elevation equation does not predict projectile flight time. Flight time is never fabricated.
+- Editable waypoint distances/times, position coordinates, and persistent local inputs; no external API or backend.
+- The grid projection is provisional until the in-game map axes are confirmed. A train calculation is only a prediction under the input timetable, not automatic detection of the actual engine.

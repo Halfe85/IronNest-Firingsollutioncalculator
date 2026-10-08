@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { MapPlotterComponent } from './map-plotter';
+import { TrainTrackerComponent } from './train-tracker';
 import { Component, computed, effect, signal } from '@angular/core';
 import {
   CHARGES, SHELLS, calculateFireTime, elevationAt, firingSolution, selectCharge,
   type ChargeMode, type FireTime
 } from './firing';
 
-type Tab = 'calculator' | 'map' | 'log';
+type Tab = 'calculator' | 'map' | 'train' | 'log';
 type Unit = 'km' | 'm';
 type Gun = '1' | '2';
 
@@ -33,7 +34,7 @@ const MODES: ReadonlyArray<{ id: ChargeMode; name: string; sub: string }> = [
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, MapPlotterComponent],
+  imports: [CommonModule, MapPlotterComponent, TrainTrackerComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -185,6 +186,19 @@ export class AppComponent {
       `Powder: ${s.charge} | Elevation: ${s.elevation.toFixed(2)}°`,
       ...(this.fireTime() ? [`Fire at: ${this.fireTime()!.display}${this.fireTime()!.previousDay ? ' (previous day)' : ''}`] : [])
     ].join('\n');
+  }
+  openTrainSolution(solution: {bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void {
+    this.bearing.set(solution.bearing.toFixed(2));
+    this.unit.set('km');
+    this.distance.set(solution.distanceKm.toFixed(4));
+    this.target.set(solution.target);
+    this.manualCharge.set(Math.ceil(solution.distanceKm/5));
+    this.mode.set('manual');
+    this.targetTime.set(solution.impactClock);
+    this.flightSeconds.set(solution.flightSeconds);
+    this.advanced.set(solution.flightSeconds.trim()!=='');
+    this.tab.set('calculator');
+    this.notice.set('Train impact point loaded. Timing requires measured projectile flight time.');
   }
   async copySolution(): Promise<void> {
     const card = this.firingCard();

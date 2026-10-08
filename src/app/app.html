@@ -8,7 +8,8 @@
     <nav class="tabbar" aria-label="Calculator sections">
       <button type="button" [class.active]="tab() === 'calculator'" (click)="setTab('calculator')" [attr.aria-current]="tab() === 'calculator' ? 'page' : null"><span>01</span> Calculator</button>
       <button type="button" [class.active]="tab() === 'map'" (click)="setTab('map')" [attr.aria-current]="tab() === 'map' ? 'page' : null"><span>02</span> Tactical map</button>
-      <button type="button" [class.active]="tab() === 'log'" (click)="setTab('log')" [attr.aria-current]="tab() === 'log' ? 'page' : null"><span>03</span> Firing log <span class="count-pill">{{ shots().length }}</span></button>
+      <button type="button" [class.active]="tab() === 'train'" (click)="setTab('train')" [attr.aria-current]="tab() === 'train' ? 'page' : null"><span>03</span> Train tracker</button>
+      <button type="button" [class.active]="tab() === 'log'" (click)="setTab('log')" [attr.aria-current]="tab() === 'log' ? 'page' : null"><span>04</span> Firing log <span class="count-pill">{{ shots().length }}</span></button>
     </nav>
 
     @if (tab() === 'calculator') {
@@ -72,6 +73,8 @@
       </main>
     } @else if (tab() === 'map') {
       <app-map-plotter (useSolution)="openMappedSolution($event)"></app-map-plotter>
+    } @else if (tab() === 'train') {
+      <app-train-tracker (useSolution)="openTrainSolution($event)"></app-train-tracker>
     } @else {
       <main class="log-grid">
         <section class="panel log-panel"><div class="log-title"><div><span class="section-index">01 // STORED FIRING DATA</span><h2>Firing log</h2><p>Saved only on this device.</p></div>@if (shots().length) { <button type="button" class="subtle-btn" (click)="clearShots()">CLEAR ALL</button> }</div>
