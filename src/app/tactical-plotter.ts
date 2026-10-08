@@ -139,7 +139,7 @@ export class TacticalPlotterComponent{
       r.status==='blocked'?'Waiting for reference':
       r.status==='conflict'?'Check reports':'Needs intel';
   }
-  getActiveFire():{bearing:number;distanceKm:number;grid:string|null}|null{
+  getActiveFire():{bearing:number;rangeKm:number;grid:string|null}|null{
     const point=this.activeResult()?.position;
     const nest=this.solution().get('nest')?.position;
     return point&&nest?firingFromPlot(nest,point):null;
