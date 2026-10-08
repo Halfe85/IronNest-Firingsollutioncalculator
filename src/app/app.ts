@@ -167,6 +167,9 @@ export class AppComponent {
     this.unit.set('km');
     this.distance.set(solution.distanceKm.toFixed(4));
     this.target.set(solution.target);
+    // Preserve the map's minimum-charge firing solution during handoff.
+    this.manualCharge.set(Math.ceil(solution.distanceKm / 5));
+    this.mode.set('manual');
     this.tab.set('calculator');
     this.notice.set('Map solution loaded. Choose your shell and log the shot when ready.');
   }
