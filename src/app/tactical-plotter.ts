@@ -157,6 +157,7 @@ export class TacticalPlotterComponent{
     this.changeNode(active.id,n=>({...n,reports:[...n.reports,{
       id:uid(),sourceId:source.id,type:'bearing',value:''
     }]}));
+    this.observationMapVisible.set(true);
   }
   modifyReport(id:string,key:'sourceId'|'type'|'value',value:string):void{
     const active=this.active();if(!active)return;
