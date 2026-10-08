@@ -121,6 +121,21 @@
             <b>{{fire.bearing | number:'1.2-2'}}°</b><b>{{fire.rangeKm | number:'1.2-2'}} km</b>
           </div>
         }
+        @if(node.role==='target'){
+          <div class="target-loadout" aria-label="Firing setup for this target">
+            <label><span>SHELL TYPE</span>
+              <select [value]="currentLoadout().shell" (change)="setTargetShell($any($event.target).value)" aria-label="Shell type for target">
+                @for(shell of shellOptions;track shell){<option [value]="shell">{{shell}}</option>}
+              </select>
+            </label>
+            <label><span>CANNON</span>
+              <select [value]="currentLoadout().cannon" (change)="setTargetCannon($any($event.target).value)" aria-label="Cannon for target">
+                <option value="left">Left cannon</option>
+                <option value="right">Right cannon</option>
+              </select>
+            </label>
+          </div>
+        }
         <div class="dialog-actions">
           <button type="button" class="secondary-action" (click)="deleteActive()" [disabled]="node.role==='nest'">Delete</button>
           <button type="button" class="secondary-action" (click)="closeModal()">Close</button>

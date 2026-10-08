@@ -30,7 +30,15 @@
               @for(s of shells;track s){<option [value]="s">{{s}}</option>}
             </select></label>
           </div>
-          <label class="wide-input"><span>TARGET LABEL (OPTIONAL)</span><input type="text" maxlength="60" [value]="label()" (input)="label.set($any($event.target).value)" placeholder="e.g. Artillery #1"></label>
+          <div class="input-row">
+            <label><span>TARGET LABEL</span><input type="text" maxlength="60" [value]="label()" (input)="label.set($any($event.target).value)" placeholder="e.g. Artillery #1"></label>
+            <label><span>CANNON</span>
+              <select aria-label="Select cannon" [value]="cannon()" (change)="setCannon($any($event.target).value)">
+                <option value="left">Left cannon</option>
+                <option value="right">Right cannon</option>
+              </select>
+            </label>
+          </div>
           <div class="calculation-actions">
             @if(elevation()!==null){<span class="ready-hint">READY · {{currentCharges()}} CHG / {{elevation() | number:'1.2-2'}}°</span>}
             @else{<span class="error-hint">Check distance, bearing and charge.</span>}
@@ -57,8 +65,19 @@
                 <button class="shot-remove" type="button" (click)="removeShot(shot.id)" [attr.aria-label]="'Delete '+shot.label">×</button>
               </div>
               <div class="shot-primary">
+                <div><span>BEARING</span><strong>{{shot.bearing | number:'1.2-2'}}°</strong></div>
                 <div><span>ELEVATION</span><strong>{{shot.elevation | number:'1.2-2'}}°</strong></div>
+              </div>
+              <div class="shot-secondary">
                 <div><span>CHARGES</span><strong>{{shot.charges}}</strong></div>
+                <div><span>SHELL TYPE</span><strong>{{shot.shell}}</strong></div>
+              </div>
+              <div class="shot-cannon">
+                <span>CANNON @if(!shot.cannon){<small> · UNASSIGNED</small>}</span>
+                <div class="shot-cannon-controls" role="group" [attr.aria-label]="'Assign cannon for '+shot.label">
+                  <button type="button" [class.active]="shot.cannon==='left'" [attr.aria-pressed]="shot.cannon==='left'" (click)="setShotCannon(shot.id,'left')">LEFT</button>
+                  <button type="button" [class.active]="shot.cannon==='right'" [attr.aria-pressed]="shot.cannon==='right'" (click)="setShotCannon(shot.id,'right')">RIGHT</button>
+                </div>
               </div>
               @if(shot.state==='miss' && shot.missKm!==null){
                 <div class="miss-feedback">

@@ -2,13 +2,15 @@ import {CommonModule} from '@angular/common';
 import {Component, HostListener, computed, effect, signal} from '@angular/core';
 import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter';
 import {TrainTrackerComponent} from './train-tracker';
-import {CHARGES,SHELLS,elevationAt,estimatedFlightSeconds} from './firing';
+import {CHARGES,SHELLS,elevationAt} from './firing';
+import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 
 type Tab='calc'|'plot'|'shots'|'train';
 type ShotState='pending'|'hit'|'miss';
 interface ShotCard{
   id:string;label:string;createdAt:string;shell:string; bearing:number;
   distanceKm:number;charges:number;elevation:number;
+  cannon:Cannon|null;
   state:ShotState;missKm:number|null;
 }
 const STORE='iron-nest-shots-v2';
@@ -30,6 +32,7 @@ export class AppComponent {
   readonly bearing=signal('90');
   readonly distance=signal('6.57');
   readonly shell=signal('HCHE');
+  readonly cannon=signal<Cannon>('left');
   readonly chargeMode=signal(0);
   readonly shots=signal<ShotCard[]>([]);
   readonly activeShotId=signal<string|null>(null);
@@ -86,7 +89,11 @@ export class AppComponent {
         if(Array.isArray(data.shots)){
           this.shots.set(data.shots.filter(s=>s&&typeof s.id==='string'&&
             Number.isFinite(s.distanceKm)&&Number.isFinite(s.elevation)&&
-            ['pending','hit','miss'].includes(s.state)).slice(0,200));
+            ['pending','hit','miss'].includes(s.state)).slice(0,200).map(s=>({
+              ...s, shell:normalizeShell(s.shell),
+              // Existing shots were created before cannon assignment existed.
+              cannon:cannonOrUnassigned(s.cannon)
+            })));
         }
         if(typeof data.activeShotId==='string')this.activeShotId.set(data.activeShotId);
         return;
@@ -97,7 +104,7 @@ export class AppComponent {
       if(old&&Array.isArray(old.shots))this.shots.set(old.shots.slice(0,200).map(s=>({
         id:s.id,label:s.target,createdAt:s.createdAt,shell:s.shell,
         bearing:s.bearing,distanceKm:s.distanceKm,charges:s.charge,
-        elevation:s.elevation,state:'pending',missKm:null
+        elevation:s.elevation,cannon:null,state:'pending',missKm:null
       })));
     }catch{/* corrupted data */ }
   }
@@ -105,15 +112,25 @@ export class AppComponent {
   closeModal():void{this.modal.set(null);this.selectedMissShot.set(null);}
   selectTab(tab:Tab):void{this.tab.set(tab);this.error.set('');}
   setChargeMode(value:string):void{this.chargeMode.set(Number(value));}
-  private makeShot(input:{label:string;bearing:number;distanceKm:number;charges:number;shell?:string}):void{
+  setCannon(value:string):void {
+    const side=cannonOrUnassigned(value);
+    if(side)this.cannon.set(side);
+  }
+  setShotCannon(id:string,value:string):void {
+    const side=cannonOrUnassigned(value);
+    if(!side)return;
+    this.shots.update(rows=>rows.map(shot=>shot.id===id?{...shot,cannon:side}:shot));
+  }
+  private makeShot(input:{label:string;bearing:number;distanceKm:number;charges:number;shell?:string;cannon?:Cannon|null}):void{
     const angle=elevationAt(input.distanceKm,input.charges);
     if(angle===null||!Number.isFinite(input.bearing)||input.bearing<0||input.bearing>360){
       this.error.set('Invalid firing solution: check range, bearing and powder.');return;
     }
     const shot:ShotCard={
       id:uid(),label:input.label.trim().slice(0,60)||'Target',createdAt:new Date().toISOString(),
-      shell:input.shell??this.shell(),bearing:input.bearing,distanceKm:input.distanceKm,
-      charges:input.charges,elevation:angle,state:'pending',missKm:null
+      shell:normalizeShell(input.shell??this.shell()),bearing:input.bearing,distanceKm:input.distanceKm,
+      charges:input.charges,elevation:angle,cannon:input.cannon===undefined?this.cannon():input.cannon,
+      state:'pending',missKm:null
     };
     this.shots.update(rows=>[shot,...rows].slice(0,200));
     this.activeShotId.set(shot.id);this.tab.set('shots');this.error.set('');
@@ -124,11 +141,11 @@ export class AppComponent {
       this.error.set('Enter a valid bearing and distance (up to 30 km).');return;
     }
     this.makeShot({label:this.label(),bearing:this.manualBearing(),
-      distanceKm:this.manualDistance(),charges:charge,shell:this.shell()});
+      distanceKm:this.manualDistance(),charges:charge,shell:this.shell(),cannon:this.cannon()});
   }
   addFromPlot(data:PlotFireRequest):void{
     const charge=Math.ceil(data.distanceKm/5);
-    this.makeShot({...data,charges:charge});
+    this.makeShot({...data,charges:charge,shell:data.shell,cannon:data.cannon});
   }
   addFromTrain(data:{bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void{
     const charge=Math.ceil(data.distanceKm/5);
@@ -164,7 +181,7 @@ export class AppComponent {
     const charge=elevationAt(target,shot.charges)!==null?
       shot.charges:Math.ceil(target/5);
     this.makeShot({label:shot.label+' (corrected)',bearing:shot.bearing,
-      distanceKm:target,charges:charge,shell:shot.shell});
+      distanceKm:target,charges:charge,shell:shot.shell,cannon:shot.cannon});
   }
   removeShot(id:string):void{
     this.shots.update(rows=>rows.filter(s=>s.id!==id));

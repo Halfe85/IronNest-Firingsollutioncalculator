@@ -119,3 +119,11 @@ The raw, typed records live in `src/app/flight-field-data.ts` with regression ch
 - Existing shots from the previous browser storage key are migrated automatically; no cloud account or server is required.
 - Existing Train Tracker remains accessible under its own tab. Its previous longer forms scroll **only inside** the central page region.
 - The exact map orientation and high-fidelity uncertainty treatment still need in-game calibration; the current renderer is explicitly labelled provisional.
+
+## Fire solution equipment and cannon assignment
+
+Every saved Fire Solution tile displays **bearing, elevation, charges, shell type and cannon**. On phones, at most two tiles appear in a row. The cannon can be switched between **Left** and **Right** directly on the saved tile; this change persists in local browser storage.
+
+The **Calculate** tab has both shell type and cannon selection. In **Tactical Plotter**, each target modal independently stores a shell type and cannon selection. The **Fire solution** button passes those selections to the saved shot, rather than falling back to the Calculate tab's previous shell. The corrected shot's shell and cannon carry over when retrying.
+
+Historical shot records with no recorded cannon remain **UNASSIGNED** until a user explicitly selects Left or Right; the app never fabricates an earlier cannon assignment.

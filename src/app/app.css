@@ -75,3 +75,24 @@
 @media(max-width:860px){.shot-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.top-label{display:none}.top-bar{height:46px}.main-tabs button{padding:10px 11px;min-height:46px;font-size:11px}.tab-content{padding:9px 8px 16px}.compact-calculator{padding:12px}.shot-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.shot-tile{padding:9px;gap:8px}.shot-primary strong{font-size:23px}.shot-primary span{font-size:8px}.bottom-bar{height:calc(60px + env(safe-area-inset-bottom))}.bottom-unit{display:grid;gap:2px}.bottom-unit strong{font-size:24px}.bottom-separator{height:36px}}
 @media(max-width:360px){.shot-tiles{grid-template-columns:1fr}.input-row{gap:7px}.input-row input,.input-row select{padding:8px}.calculation-actions button{width:100%}}
+
+/* Full fire-control data stays visible even with two solution cards per mobile row. */
+.shot-primary{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.shot-primary>div{padding:8px;min-width:0}
+.shot-primary strong{font-size:clamp(19px,2.8vw,29px);white-space:nowrap;letter-spacing:-.8px}
+.shot-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.shot-secondary>div{display:grid;gap:3px;min-width:0;padding:8px;background:#111b15;border:1px solid #3e4e3e;border-radius:6px}
+.shot-secondary span,.shot-cannon>span{font-size:9px;color:#9fb49f;font-weight:850;letter-spacing:.6px}
+.shot-secondary strong{font-size:18px;color:#e9dbb9;min-width:0;overflow-wrap:anywhere}
+.shot-cannon{display:grid;gap:5px}
+.shot-cannon>span small{font-size:9px;color:#e9b5a1}
+.shot-cannon-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.shot-cannon-controls button{height:37px;min-width:0;background:#202c23;border:1px solid #526852;color:#becfbd;border-radius:5px;font-size:11px;font-weight:850;letter-spacing:.5px}
+.shot-cannon-controls button.active{background:#705936;border-color:#e0b678;color:#fff0cc}
+@media(max-width:520px){
+  .shot-primary strong{font-size:clamp(17px,4.9vw,23px)}
+  .shot-primary>div,.shot-secondary>div{padding:6px}
+  .shot-primary span,.shot-secondary span{font-size:8px}
+  .shot-secondary strong{font-size:15px}
+  .shot-cannon-controls button{height:36px;font-size:10px}
+}

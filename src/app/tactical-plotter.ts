@@ -6,8 +6,10 @@ import {
   type GridInput, type IntelNode, type NodeRole
 } from './graph-math';
 import {GridSelectComponent} from './grid-select';
+import {SHELLS} from './firing';
+import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 
-export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string;}
+export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; shell:string; cannon:Cannon;}
 const STORAGE='iron-nest-plot-graph-v1';
 function clone(src:readonly IntelNode[]):IntelNode[]{
   return src.map(n=>({...n,grid:n.grid?{...n.grid}:undefined,
@@ -28,6 +30,12 @@ export class TacticalPlotterComponent{
   readonly modal=signal<'map'|'node'|null>(null);
   readonly activeId=signal<string|null>(null);
   readonly status=signal('');
+  readonly shellOptions=SHELLS;
+  readonly targetLoadouts=signal<Record<string,{shell:string;cannon:Cannon}>>({});
+  readonly currentLoadout=computed(()=>{
+    const id=this.activeId()??'';
+    return this.targetLoadouts()[id]??{shell:'HCHE',cannon:'left' as Cannon};
+  });
   readonly solution=computed(()=>solvePlotGraph(this.nodes()));
   readonly nest=computed(()=>this.nodes().find(n=>n.role==='nest'));
   readonly spotters=computed(()=>this.nodes().filter(n=>n.role==='spotter'));
@@ -45,15 +53,26 @@ export class TacticalPlotterComponent{
   constructor(){
     try{
       const data=JSON.parse(localStorage.getItem(STORAGE)??'null') as
-        {name?:unknown;nodes?:unknown}|null;
+        {name?:unknown;nodes?:unknown;targetLoadouts?:unknown}|null;
       if(data&&typeof data.name==='string')this.name.set(data.name.slice(0,80));
       if(data&&Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
         data.nodes.every((n:IntelNode)=>n&&typeof n.id==='string'&&
         typeof n.name==='string'&&['nest','spotter','reference','target'].includes(n.role)&&
         Array.isArray(n.reports)&&n.reports.length<=20))this.nodes.set(clone(data.nodes));
+      if(data&&data.targetLoadouts&&typeof data.targetLoadouts==='object'&&!Array.isArray(data.targetLoadouts)){
+        const known=new Set(this.nodes().map(n=>n.id));
+        const input=data.targetLoadouts as Record<string,{shell?:unknown;cannon?:unknown}>;
+        const cleaned:Record<string,{shell:string;cannon:Cannon}>={};
+        for(const [id,item] of Object.entries(input)){
+          if(known.has(id)&&item&&typeof item==='object'){
+            cleaned[id]={shell:normalizeShell(item.shell),cannon:cannonOrUnassigned(item.cannon)??'left'};
+          }
+        }
+        this.targetLoadouts.set(cleaned);
+      }
     }catch { /* missing or corrupted local data */ }
     effect(()=>{try{localStorage.setItem(STORAGE,
-      JSON.stringify({name:this.name(),nodes:this.nodes()}));}catch{/* storage blocked */}});
+      JSON.stringify({name:this.name(),nodes:this.nodes(),targetLoadouts:this.targetLoadouts()}));}catch{/* storage blocked */}});
   }
   @HostListener('document:keydown.escape')
   closeModal():void{this.modal.set(null);this.activeId.set(null);}
@@ -72,6 +91,7 @@ export class TacticalPlotterComponent{
   newMission():void{
     if(!window.confirm('Start a new mission and replace the current locally saved plot?'))return;
     this.name.set('New mission');
+    this.targetLoadouts.set({});
     this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',
       grid:{letter:'A',column:1,x:0,y:0},reports:[]}]);
     this.status.set('Set Iron Nest grid, add spotters and then reference points or targets.');
@@ -80,6 +100,7 @@ export class TacticalPlotterComponent{
   loadExample():void{
     if(!window.confirm('Load Gibraltar example and replace the current plot?'))return;
     this.name.set('Gibraltar • Heavy Cruiser');
+    this.targetLoadouts.set({});
     this.nodes.set(clone(GIBRALTAR_MISSION));
     this.status.set('Gibraltar example loaded. Resolve references before the cruiser.');
     this.closeModal();
@@ -95,6 +116,20 @@ export class TacticalPlotterComponent{
     };
     this.nodes.update(nodes=>[...nodes,newNode]);
     this.openNode(id);
+  }
+  setTargetShell(value:string):void {
+    const id=this.activeId();
+    if(!id||!SHELLS.some(s=>s===value))return;
+    this.targetLoadouts.update(all=>({...all,[id]:{
+      ...this.currentLoadout(),shell:value
+    }}));
+  }
+  setTargetCannon(value:string):void {
+    const id=this.activeId(),side=cannonOrUnassigned(value);
+    if(!id||!side)return;
+    this.targetLoadouts.update(all=>({...all,[id]:{
+      ...this.currentLoadout(),cannon:side
+    }}));
   }
   deleteActive():void{
     const id=this.activeId();
@@ -148,7 +183,8 @@ export class TacticalPlotterComponent{
     const point=this.activeResult();const fire=this.getActiveFire();
     if(!point||!fire||!fire.grid)return;
     this.fireSolution.emit({
-      label:point.node.name,bearing:fire.bearing,distanceKm:fire.rangeKm,grid:fire.grid
+      label:point.node.name,bearing:fire.bearing,distanceKm:fire.rangeKm,grid:fire.grid,
+      shell:this.currentLoadout().shell,cannon:this.currentLoadout().cannon
     });
     this.closeModal();
   }
