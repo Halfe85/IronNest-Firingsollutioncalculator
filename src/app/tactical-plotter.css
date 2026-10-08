@@ -1,0 +1,60 @@
+.plot-surface{max-width:960px;margin:0 auto;display:grid;gap:9px}
+.plot-control,.plot-nest,.plot-section{background:#18211c;border:1px solid #354439;border-radius:9px;padding:12px}
+.plot-control{display:flex;align-items:end;justify-content:space-between;gap:10px}
+.mission-heading{min-width:0;flex:1;display:grid;gap:4px}
+.mission-heading span,.field-label>span,.micro-label{font-size:10px;color:#9fae9d;letter-spacing:.9px;font-weight:800}
+.mission-heading input,.field-label input{width:100%;min-width:0;background:#101914;border:1px solid #465b47;border-radius:6px;color:#f5e7ca;padding:8px;font-size:16px;min-height:42px}
+.plot-actions,.two-actions{display:flex;gap:5px;flex-wrap:wrap}
+.plot-actions button,.section-heading button{border:1px solid #526b51;border-radius:6px;background:#26382a;color:#dfecd7;font-size:12px;font-weight:760;min-height:40px;padding:7px 9px}
+.plot-actions .map-launch{background:#ecb973;color:#192017;border-color:#ecb973}
+.section-label,.section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;font-weight:850;letter-spacing:.6px;color:#c5d7c3;margin-bottom:9px}
+.section-label span{color:#efc58a}
+.section-heading{margin-bottom:7px}
+.spotter-chips{display:flex;flex-wrap:wrap;gap:7px}
+.spotter-chip{display:grid;gap:3px;min-height:45px;background:#101914;border:1px solid #48634c;border-radius:6px;padding:6px 11px;color:#c0d2c0;text-align:left}
+.spotter-chip span{font-size:11px}.spotter-chip b{font-size:13px;color:#e5e9d8}
+.empty-note{font-size:11px;color:#a1b09f;line-height:1.5;margin:0 0 7px}
+.node-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.node-card{border:1px solid #445546;background:#111a15;border-radius:7px;display:flex;align-items:center;gap:8px;text-align:left;padding:9px;min-height:55px;color:#e9eee4;min-width:0}
+.node-card:hover{border-color:#bb9968}
+.role-icon{color:#dfce9e;font-size:20px;flex:none}.role-icon.hostile{color:#f39481}
+.node-name{display:grid;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;flex:1}
+.node-name small{color:#92a992;font-size:9px;font-weight:700}
+.node-location{color:#c9daa8;font-size:11px;text-align:right;white-space:nowrap}.node-location.unresolved{color:#e2b3a0;font-size:10px}
+.plot-status{margin:0;font-size:12px;color:#c8e1bf;padding:9px 11px;border-radius:5px;background:#273c2b}
+.plot-overlay{position:fixed;inset:0;background:rgba(3,9,6,.78);z-index:1000;display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.plot-dialog{width:min(690px,100%);max-height:calc(100dvh - 24px);min-height:0;overflow-y:auto;border:1px solid #697659;border-radius:12px;background:#1b2720;color:#eef0e6;box-shadow:0 24px 70px #0009;padding:15px}
+.dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.dialog-heading h2{font-size:18px;margin:4px 0 0;overflow-wrap:anywhere}
+.close-x{width:43px;height:43px;flex:none;background:#2a372d;color:#f7e8c8;border:1px solid #637261;border-radius:6px;font-size:24px}
+.field-label{display:grid;gap:6px;margin-bottom:12px}
+.report-heading{display:flex;align-items:center;justify-content:space-between;margin:13px 0 9px;font-size:12px}
+.report-heading button,.secondary-action{border:1px solid #526c50;background:#2c392d;color:#e8e9d5;min-height:42px;padding:8px 10px;border-radius:6px;font-weight:750;font-size:12px}
+.intel-line{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,.7fr) 38px;align-items:end;gap:5px;margin-bottom:9px}
+.intel-line label{display:grid;min-width:0;gap:4px}
+.intel-line label>span{font-size:9px;color:#adc0aa;font-weight:750}
+.intel-line input,.intel-line select{background:#101914;color:#f6ebd3;min-width:0;width:100%;height:42px;border:1px solid #45604a;border-radius:5px;padding:5px;font-size:16px}
+.intel-line select{font-size:13px}
+.remove-intel{height:42px;background:#3a2524;color:#f0ad9b;border:1px solid #764c44;border-radius:5px;font-size:20px}
+.point-result{border:1px solid #4b5c47;background:#111c16;padding:11px;border-radius:7px;display:grid;gap:4px;margin:11px 0}
+.point-result>span{font-size:10px;letter-spacing:1px;color:#9fb3a1;font-weight:750}
+.point-result strong{font-size:21px;color:#efd4a6}
+.point-result small{font-size:11px;color:#a8b9a7}
+.position-details{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:11px;color:#a7b7a5;margin-bottom:10px}
+.position-details b{font-size:15px;color:#f3e6c7}
+.ambiguous-note{font-size:12px;color:#eac79e;line-height:1.5}
+.candidate-list{display:flex;gap:7px;flex-wrap:wrap}
+.candidate-list button{background:#182f1e;color:#e3e9d6;border:1px solid #5d6c51;padding:9px;border-radius:6px;min-height:42px}
+.candidate-list button.chosen{background:#635332;border-color:#e4bd79}
+.candidate-list small{color:#e7d0a1}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:15px}
+.primary-action{min-height:43px;border:1px solid #f3d19b;background:#efb975;color:#1e241c;font-weight:850;padding:9px 13px;border-radius:6px}
+.primary-action:disabled{opacity:.35}
+.map-dialog{width:min(1120px,100%)}
+.map-viewport{overflow:auto;background:#101a14;border:1px solid #52624f;border-radius:7px}
+.plot-svg{display:block;width:100%;min-width:800px;height:auto}
+.map-line{stroke:#52604d;stroke-width:.8}
+.map-text{fill:#c6d2b2;font-size:12px;font-weight:850}
+.map-marker-text{paint-order:stroke;stroke:#102016;stroke-width:3px;fill:#ffdbaf;font-size:11px;font-weight:900}
+.map-note{color:#a4b3a2;font-size:11px;line-height:1.6}
+@media(max-width:520px){.plot-control{align-items:stretch;flex-direction:column}.node-card{padding:8px;gap:5px;flex-wrap:wrap}.node-location{flex-basis:100%;text-align:left}.intel-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 35px}.intel-line label:nth-child(3){grid-column:1/3;grid-row:2}.intel-line .remove-intel{grid-column:3;grid-row:1/3;height:100%}.plot-dialog{padding:12px}}

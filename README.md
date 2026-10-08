@@ -105,3 +105,17 @@ The community model differs from the in-game displayed time by **−1.38 s** for
 **Status:** This is a calibration *dataset*, not a new fitted speed formula. Continue comparing samples at constant charge and varying range, and if possible note shell type and both the game's flight-time reading and the stopwatch interval. A future change to the model must be supported by independent observations, not by forced fitting to three rounded measurements.
 
 The raw, typed records live in `src/app/flight-field-data.ts` with regression checks in `src/app/firing.test.ts`.
+
+## Mobile-first compact workstation (October 2026 redesign)
+
+- A full-screen `main-container` has three persistent vertical regions: `top-bar`, scrollable `main-content`, and `bottom-bar`. Tabs stay at the top of the scrolling content. The browser document itself no longer needs to scroll vertically.
+- The main Calculate tab shows only compact inputs; the fixed footer shows **charges and elevation**, no giant result card or charge ladder. The former time-on-target controls are removed from this tab.
+- The footer **?** opens the About modal containing the community firing formula, source links, and caveats.
+- Tactical Plotter is a graph of editable **Nest → Spotters → Reference points → Targets**, including target-to-target references. Coordinates use four dropdowns (letter A–T, number 1–10, subcell X 0–9 and Y 0–9), and additional spotters can be added as needed.
+- All report origins can be any *resolved* spotter, reference point, or target. Bearing+range, bearing+bearing and range+range geometric intersections are evaluated, with 0.5° bearing tolerance. When two candidates exist, choose one before dependent points can be resolved. Cyclic references and inconsistent readings are visibly unresolved.
+- The Gibraltar screenshot mission is the sample: Nest `A2 2:3`, Spotter #1 `B8 6:1`, Spotter #2 `E4 7:7`, reference `The Mole` from 051° (#2) and 088° (#1), reference `Dockmaster's House` 5.73 km from Mole and 084° from #1, and target `HMS Rockingham` 10 km from Dockmaster and 027° from #2. This is a **graph**, not an assumption that everything is observed directly from a spotter.
+- The tactical map is hidden behind a **Map modal**. Target details are shown in a modal and feature a **Fire solution** button only when the coordinate is uniquely resolved or a candidate is explicitly selected.
+- Fire Solutions shows saved tiles (two columns at typical mobile widths) with **✓ success** and **× miss** actions. A miss opens a dialog for **signed error in kilometres**: positive = long/overshoot, negative = short/undershoot. Same-charge corrected angle uses `(targetDistance - signedMiss) × 12 / charges` when still reachable, with a Retry action.
+- Existing shots from the previous browser storage key are migrated automatically; no cloud account or server is required.
+- Existing Train Tracker remains accessible under its own tab. Its previous longer forms scroll **only inside** the central page region.
+- The exact map orientation and high-fidelity uncertainty treatment still need in-game calibration; the current renderer is explicitly labelled provisional.

@@ -1,0 +1,4 @@
+.grid-picks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.grid-picks label{display:grid;gap:3px;min-width:0}
+.grid-picks label span{font-size:9px;font-weight:750;color:#9baa9b}
+.grid-picks select{width:100%;min-width:0;height:42px;border:1px solid #465848;border-radius:6px;background:#151e18;color:#e9f0e7;font-size:16px;padding:5px 2px;text-align:center}

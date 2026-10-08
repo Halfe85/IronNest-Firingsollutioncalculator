@@ -1,0 +1,169 @@
+<div class="plot-surface">
+  <div class="plot-control">
+    <label class="mission-heading"><span>MISSION</span>
+      <input type="text" maxlength="80" [value]="name()" (input)="setName($any($event.target).value)" aria-label="Mission name">
+    </label>
+    <div class="plot-actions">
+      <button type="button" (click)="newMission()">New</button>
+      <button type="button" (click)="loadExample()">Example</button>
+      <button class="map-launch" type="button" (click)="openMap()">Map ↗</button>
+    </div>
+  </div>
+  <div class="plot-nest">
+    <div class="section-label">IRON NEST <span>{{ nest() ? gridLabel(nest()!) : '—' }}</span></div>
+    @if(nest();as n){@if(n.grid){<app-grid-select [value]="n.grid" (valueChange)="setNestGrid($event)"></app-grid-select>}}
+  </div>
+  <div class="plot-section">
+    <div class="section-heading"><strong>SPOTTERS</strong><button type="button" (click)="addNode('spotter')">+ Spotter</button></div>
+    @if(!spotters().length){<p class="empty-note">Add observers and choose their grid coordinates.</p>}
+    <div class="spotter-chips">
+      @for(node of spotters();track node.id){
+        <button type="button" class="spotter-chip" (click)="openNode(node.id)">
+          <span>{{node.name}}</span><b>{{gridLabel(node)}}</b>
+        </button>
+      }
+    </div>
+  </div>
+  <div class="plot-section">
+    <div class="section-heading">
+      <strong>REFERENCES & TARGETS</strong>
+      <div class="two-actions">
+        <button type="button" (click)="addNode('reference')">+ Reference</button>
+        <button type="button" (click)="addNode('target')">+ Target</button>
+      </div>
+    </div>
+    <div class="node-grid">
+      @for(node of references();track node.id){
+        <button type="button" class="node-card" (click)="openNode(node.id)">
+          <span class="role-icon">◇</span>
+          <span class="node-name">{{node.name}}<small>REFERENCE</small></span>
+          <span class="node-location" [class.unresolved]="!solution().get(node.id)?.position">{{plotLabel(node.id)}}</span>
+        </button>
+      }
+      @for(node of targets();track node.id){
+        <button type="button" class="node-card" (click)="openNode(node.id)">
+          <span class="role-icon hostile">⊕</span>
+          <span class="node-name">{{node.name}}<small>TARGET</small></span>
+          <span class="node-location" [class.unresolved]="!solution().get(node.id)?.position">{{plotLabel(node.id)}}</span>
+        </button>
+      }
+      @if(references().length+targets().length===0){
+        <p class="empty-note">Add a reference or target and record two observations to solve it.</p>
+      }
+    </div>
+  </div>
+  @if(status()){<p class="plot-status" role="status">{{status()}}</p>}
+</div>
+
+@if(modal()==='node'){
+  <div class="plot-overlay" (click)="closeModal()" role="presentation">
+    <section class="plot-dialog" role="dialog" aria-modal="true" aria-label="Point information" (click)="$event.stopPropagation()">
+      <header class="dialog-heading">
+        <div><span class="micro-label">POINT DETAILS</span><h2>{{ active()?.name }}</h2></div>
+        <button type="button" class="close-x" (click)="closeModal()" aria-label="Close point details">×</button>
+      </header>
+      @if(active();as node){
+        <label class="field-label"><span>NAME</span><input type="text" maxlength="48" [value]="node.name" (input)="renameNode($any($event.target).value)"></label>
+        @if(node.role==='spotter'||node.role==='nest'){
+          <div class="field-label"><span>GRID COORDINATES</span>
+            @if(node.grid){<app-grid-select [value]="node.grid" (valueChange)="setActiveGrid($event)"></app-grid-select>}
+          </div>
+        } @else {
+          <div class="report-heading"><strong>REPORTS</strong><button type="button" (click)="addReport()">+ Observation</button></div>
+          @for(report of node.reports;track report.id){
+            <div class="intel-line">
+              <label><span>FROM</span><select [value]="report.sourceId" (change)="modifyReport(report.id,'sourceId',$any($event.target).value)">
+                @for(origin of originOptions();track origin.id){<option [value]="origin.id">{{origin.name}}</option>}
+              </select></label>
+              <label><span>TYPE</span><select [value]="report.type" (change)="modifyReport(report.id,'type',$any($event.target).value)">
+                <option value="bearing">Bearing °</option><option value="range">Range km</option><option value="sector">Compass</option>
+              </select></label>
+              <label><span>VALUE</span>
+                @if(report.type==='sector'){
+                  <select [value]="report.value" (change)="modifyReport(report.id,'value',$any($event.target).value)">
+                    @for(dir of ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];track dir){
+                      <option [value]="dir">{{dir}}</option>
+                    }
+                  </select>
+                } @else {
+                  <input type="text" inputmode="decimal" [value]="report.value" (input)="modifyReport(report.id,'value',$any($event.target).value)" [placeholder]="report.type==='range'?'5.73':'051'">
+                }
+              </label>
+              <button type="button" class="remove-intel" (click)="removeReport(report.id)" aria-label="Remove observation">×</button>
+            </div>
+          }
+          @if(!node.reports.length){<p class="empty-note">Add two independent bearings or distances.</p>}
+          @if(activeResult();as result){
+            @if(result.candidates.length>1){
+              <p class="ambiguous-note">Several intersections are possible. Choose a candidate to unlock dependent points.</p>
+              <div class="candidate-list">
+                @for(p of result.candidates;track $index){
+                  <button type="button" [class.chosen]="node.chosenCandidate===$index" (click)="confirmCandidate($index)">
+                    {{formatGrid(p)}} <small>{{node.chosenCandidate===$index?'SELECTED':'CHOOSE'}}</small>
+                  </button>
+                }
+                @if(node.chosenCandidate!==null&&node.chosenCandidate!==undefined){
+                  <button type="button" (click)="clearCandidate()">Clear selection</button>
+                }
+              </div>
+            }
+          }
+        }
+        @if(activeResult();as current){
+          <div class="point-result">
+            <span>POSITION</span>
+            <strong>{{current.position ? formatGrid(current.position) : 'UNRESOLVED'}}</strong>
+            <small>{{current.message}}</small>
+          </div>
+        }
+        @if(getActiveFire();as fire){
+          <div class="position-details"><span>FROM IRON NEST</span>
+            <b>{{fire.bearing | number:'1.2-2'}}°</b><b>{{fire.distanceKm | number:'1.2-2'}} km</b>
+          </div>
+        }
+        <div class="dialog-actions">
+          <button type="button" class="secondary-action" (click)="deleteActive()" [disabled]="node.role==='nest'">Delete</button>
+          <button type="button" class="secondary-action" (click)="closeModal()">Close</button>
+          @if(node.role==='target'){
+            <button type="button" class="primary-action" [disabled]="!getActiveFire()" (click)="emitFire()">Fire solution →</button>
+          }
+        </div>
+      }
+    </section>
+  </div>
+}
+
+@if(modal()==='map'){
+  <div class="plot-overlay" (click)="closeModal()" role="presentation">
+    <section class="plot-dialog map-dialog" role="dialog" aria-modal="true" aria-label="Tactical map" (click)="$event.stopPropagation()">
+      <header class="dialog-heading">
+        <div><span class="micro-label">MAP OVERLAY</span><h2>{{name()}}</h2></div>
+        <button type="button" class="close-x" (click)="closeModal()" aria-label="Close map">×</button>
+      </header>
+      <div class="map-viewport" tabindex="0" role="region" aria-label="Scrollable grid map">
+        <svg viewBox="0 0 960 515" class="plot-svg" role="img" aria-label="Iron Nest, spotters, reference points and targets">
+          <rect x="45" y="30" width="880" height="440" fill="#16231c"/>
+          @for(col of mapColumns;track col;let i=$index){
+            <line [attr.x1]="mapX(i)" [attr.x2]="mapX(i)" y1="30" y2="470" class="map-line"/>
+            <text [attr.x]="mapX(i+.5)" y="21" text-anchor="middle" class="map-text">{{col}}</text>
+          }
+          @for(row of mapRows;track row){
+            <line x1="45" x2="925" [attr.y1]="mapY(row-1)" [attr.y2]="mapY(row-1)" class="map-line"/>
+            <text x="25" [attr.y]="mapY(row-.5)+4" class="map-text" text-anchor="middle">{{row}}</text>
+          }
+          <line x1="925" x2="925" y1="30" y2="470" class="map-line"/>
+          <line x1="45" x2="925" y1="470" y2="470" class="map-line"/>
+          @for(marker of mapMarkers();track marker.id){
+            <circle [attr.cx]="mapX(marker.p.x)" [attr.cy]="mapY(marker.p.y)" r="9"
+              [attr.fill]="marker.role==='nest'?'#efbc75':marker.role==='spotter'?'#8bbee1':marker.role==='reference'?'#e2ce97':'#f18a75'"
+              stroke="#141b17" stroke-width="2"/>
+            <text class="map-marker-text" [attr.x]="mapX(marker.p.x)+12" [attr.y]="mapY(marker.p.y)-9">
+              {{marker.name}} ({{marker.grid}})
+            </text>
+          }
+        </svg>
+      </div>
+      <p class="map-note">Provisional grid orientation. Swipe sideways on a phone to inspect the full map.</p>
+    </section>
+  </div>
+}

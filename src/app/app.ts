@@ -1,297 +1,177 @@
-import { CommonModule } from '@angular/common';
-import { MapPlotterComponent } from './map-plotter';
-import { TrainTrackerComponent } from './train-tracker';
-import { Component, computed, effect, signal } from '@angular/core';
-import {
-  CHARGES, SHELLS, calculateFireTime, elevationAt, estimatedFlightSeconds, firingSolution, selectCharge,
-  type ChargeMode, type FireTime
-} from './firing';
+import {CommonModule} from '@angular/common';
+import {Component, HostListener, computed, effect, signal} from '@angular/core';
+import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter';
+import {TrainTrackerComponent} from './train-tracker';
+import {CHARGES,SHELLS,elevationAt,estimatedFlightSeconds} from './firing';
 
-type Tab = 'calculator' | 'map' | 'train' | 'log';
-type Unit = 'km' | 'm';
-type Gun = '1' | '2';
-
-interface SavedShot {
-  id: string;
-  createdAt: string;
-  target: string;
-  shell: string;
-  bearing: number;
-  distanceKm: number;
-  charge: number;
-  elevation: number;
-  fireAt: string | null;
+type Tab='calc'|'plot'|'shots'|'train';
+type ShotState='pending'|'hit'|'miss';
+interface ShotCard{
+  id:string;label:string;createdAt:string;shell:string; bearing:number;
+  distanceKm:number;charges:number;elevation:number;
+  state:ShotState;missKm:number|null;
 }
-interface LocalData { shots: SavedShot[]; queues: Record<Gun, string[]>; }
-const STORAGE_KEY = 'iron-nest-fcc-v1';
-const MODES: ReadonlyArray<{ id: ChargeMode; name: string; sub: string }> = [
-  { id: 'low-angle', name: 'Low angle', sub: 'Under chosen angle' },
-  { id: 'economy', name: 'Economy', sub: '30–50° if possible' },
-  { id: 'history', name: 'Match history', sub: 'Match past shots' },
-  { id: 'manual', name: 'Manual', sub: 'Choose charge' }
-];
-
+const STORE='iron-nest-shots-v2';
+const OLD_STORE='iron-nest-fcc-v1';
+function uid():string {
+  return typeof crypto!=='undefined'&&'randomUUID' in crypto?
+    crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
+}
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, MapPlotterComponent, TrainTrackerComponent],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  selector:'app-root',standalone:true,
+  imports:[CommonModule,TacticalPlotterComponent,TrainTrackerComponent],
+  templateUrl:'./app.html',styleUrl:'./app.css'
 })
 export class AppComponent {
-  readonly modes = MODES;
-  readonly charges = CHARGES;
-  readonly shells = SHELLS;
-  readonly tab = signal<Tab>('calculator');
-  readonly advanced = signal(false);
-  readonly distance = signal('6.57');
-  readonly unit = signal<Unit>('km');
-  readonly bearing = signal('90');
-  readonly shell = signal('HCHE');
-  readonly target = signal('');
-  readonly mode = signal<ChargeMode>('low-angle');
-  readonly manualCharge = signal(2);
-  readonly maxAngle = signal(45);
-  readonly targetTime = signal('');
-  readonly flightSeconds = signal('');
-  readonly shots = signal<SavedShot[]>([]);
-  readonly queues = signal<Record<Gun, string[]>>({ '1': [], '2': [] });
-  readonly notice = signal('');
-
-  readonly distanceKm = computed(() => {
-    const raw = this.distance().trim().replace(',', '.');
-    if (!raw) return NaN;
-    const value = Number(raw);
-    return this.unit() === 'm' ? value / 1000 : value;
+  readonly charges=CHARGES;
+  readonly shells=SHELLS;
+  readonly tab=signal<Tab>('calc');
+  readonly label=signal('Target');
+  readonly bearing=signal('90');
+  readonly distance=signal('6.57');
+  readonly shell=signal('HCHE');
+  readonly chargeMode=signal(0);
+  readonly shots=signal<ShotCard[]>([]);
+  readonly activeShotId=signal<string|null>(null);
+  readonly modal=signal<'about'|'miss'|null>(null);
+  readonly missInput=signal('');
+  readonly selectedMissShot=signal<string|null>(null);
+  readonly error=signal('');
+  readonly manualDistance=computed(()=>{
+    const txt=this.distance().trim().replace(',','.');
+    return txt===''?NaN:Number(txt);
   });
-  readonly bearingNumber = computed(() => {
-    const raw = this.bearing().trim().replace(',', '.');
-    return raw === '' ? NaN : Number(raw);
+  readonly manualBearing=computed(()=>{
+    const txt=this.bearing().trim().replace(',','.');
+    return txt===''?NaN:Number(txt);
   });
-  readonly selectedCharge = computed(() => selectCharge(
-    this.distanceKm(), this.mode(), this.manualCharge(), this.maxAngle(),
-    this.shots().map(shot => shot.elevation)
-  ));
-  readonly solution = computed(() => {
-    const charge = this.selectedCharge();
-    return charge === null ? null : firingSolution({
-      distanceKm: this.distanceKm(),
-      bearing: this.bearingNumber(),
-      charge
-    });
+  readonly currentCharges=computed(()=>{
+    const d=this.manualDistance();
+    if(!Number.isFinite(d)||d<=0||d>30)return null;
+    const charges=this.chargeMode()||Math.ceil(d/5);
+    return elevationAt(d,charges)!==null?charges:null;
   });
-  readonly distanceValid = computed(() => Number.isFinite(this.distanceKm()) &&
-    this.distanceKm() > 0 && this.distanceKm() <= 30);
-  readonly solutionError = computed(() => {
-    if (!Number.isFinite(this.distanceKm()) || this.distanceKm() <= 0) return 'Enter a distance greater than 0.';
-    if (this.distanceKm() > 30) return 'Target is beyond the six-charge, 30 km limit.';
-    if (!Number.isFinite(this.bearingNumber()) || this.bearingNumber() < 0 || this.bearingNumber() > 360)
-      return 'Bearing must be between 0° and 360°.';
-    if (this.mode() === 'manual' && this.selectedCharge() === null)
-      return 'Selected charge cannot reach the target. Choose a higher charge.';
-    return null;
+  readonly elevation=computed(()=>{
+    const charges=this.currentCharges();
+    const b=this.manualBearing();
+    return charges===null||!Number.isFinite(b)||b<0||b>360?
+      null:elevationAt(this.manualDistance(),charges);
   });
-  readonly chargeRows = computed(() => CHARGES.map(charge => ({
-    charge, elevation: elevationAt(this.distanceKm(), charge), range: charge * 5
-  })));
-  readonly estimatedFlight = computed<number | null>(() => {
-    const s = this.solution();
-    return s ? estimatedFlightSeconds(s.distanceKm, s.charge) : null;
+  readonly activeShot=computed(()=>this.shots().find(s=>s.id===this.activeShotId())??null);
+  readonly bottomSolution=computed(()=>{
+    if(this.tab()==='calc'&&this.elevation()!==null)
+      return {charge:this.currentCharges()!,elevation:this.elevation()!};
+    const shot=this.activeShot();
+    return shot?{charge:shot.charges,elevation:shot.elevation}:null;
   });
-  readonly flightIsMeasured = computed(() => this.flightSeconds().trim() !== '');
-  readonly effectiveFlightSeconds = computed<number | null>(() => {
-    if (this.flightIsMeasured()) {
-      const value = Number(this.flightSeconds().trim().replace(',', '.'));
-      return Number.isFinite(value) && value >= 0 && value <= 3600 ? value : null;
-    }
-    return this.estimatedFlight();
+  readonly missShot=computed(()=>this.shots().find(s=>s.id===this.selectedMissShot())??null);
+  readonly correctedAngle=computed(()=>{
+    const shot=this.missShot();
+    if(!shot)return null;
+    const n=Number(this.missInput().trim().replace(',','.'));
+    if(this.missInput().trim()===''||!Number.isFinite(n))return null;
+    return elevationAt(shot.distanceKm-n,shot.charges);
   });
-  readonly fireTime = computed<FireTime | null>(() => {
-    const flight = this.effectiveFlightSeconds();
-    if (!this.targetTime().trim() || flight === null) return null;
-    return calculateFireTime(this.targetTime(), flight);
-  });
-  readonly lowAngleNote = computed(() => {
-    const solution = this.solution();
-    if (!solution) return '';
-    if (this.mode() === 'low-angle' && solution.elevation > this.maxAngle())
-      return 'No reachable charge meets the angle cap; showing the lowest available angle.';
-    if (this.mode() === 'economy' && (solution.elevation < 30 || solution.elevation > 50))
-      return 'No valid 30–50° solution; using the lowest reachable charge.';
-    if (this.mode() === 'history' && this.shots().length === 0)
-      return 'No shot history yet; using the lowest reachable charge.';
-    return '';
-  });
-  readonly gun1 = computed(() => this.resolveQueue('1'));
-  readonly gun2 = computed(() => this.resolveQueue('2'));
-
-  constructor() {
+  constructor(){
     this.restore();
-    effect(() => {
-      const state: LocalData = { shots: this.shots(), queues: this.queues() };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* storage blocked */ }
-    });
+    effect(()=>{try{localStorage.setItem(STORE,JSON.stringify({
+      shots:this.shots(),activeShotId:this.activeShotId()
+    }));}catch{/* storage unavailable */}});
   }
-  private restore(): void {
-    try {
-      const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-      if (!parsed || typeof parsed !== 'object') return;
-      const data = parsed as Partial<LocalData>;
-      if (Array.isArray(data.shots)) {
-        const shots = data.shots.filter((shot): shot is SavedShot =>
-          !!shot && typeof shot.id === 'string' &&
-          typeof shot.bearing === 'number' && typeof shot.elevation === 'number' &&
-          typeof shot.distanceKm === 'number' && typeof shot.charge === 'number' &&
-          typeof shot.shell === 'string' && typeof shot.createdAt === 'string' &&
-          typeof shot.target === 'string' && (shot.fireAt === null || typeof shot.fireAt === 'string')
-        ).slice(0, 100);
-        this.shots.set(shots);
+  private restore():void{
+    try{
+      const raw=localStorage.getItem(STORE);
+      if(raw){
+        const data=JSON.parse(raw) as {shots?:ShotCard[];activeShotId?:string};
+        if(Array.isArray(data.shots)){
+          this.shots.set(data.shots.filter(s=>s&&typeof s.id==='string'&&
+            Number.isFinite(s.distanceKm)&&Number.isFinite(s.elevation)&&
+            ['pending','hit','miss'].includes(s.state)).slice(0,200));
+        }
+        if(typeof data.activeShotId==='string')this.activeShotId.set(data.activeShotId);
+        return;
       }
-      if (data.queues && typeof data.queues === 'object') {
-        const known = new Set(this.shots().map(s => s.id));
-        const first = Array.isArray(data.queues['1']) ? data.queues['1'].filter((v): v is string => typeof v === 'string' && known.has(v)).slice(0, 7) : [];
-        const second = Array.isArray(data.queues['2']) ? data.queues['2'].filter((v): v is string => typeof v === 'string' && known.has(v) && !first.includes(v)).slice(0, 7) : [];
-        this.queues.set({ '1': first, '2': second });
-      }
-    } catch { /* bad or blocked storage; start fresh */ }
+      const old=JSON.parse(localStorage.getItem(OLD_STORE)??'null') as
+        {shots?:Array<{id:string;target:string;createdAt:string;shell:string;
+          bearing:number;distanceKm:number;charge:number;elevation:number}>}|null;
+      if(old&&Array.isArray(old.shots))this.shots.set(old.shots.slice(0,200).map(s=>({
+        id:s.id,label:s.target,createdAt:s.createdAt,shell:s.shell,
+        bearing:s.bearing,distanceKm:s.distanceKm,charges:s.charge,
+        elevation:s.elevation,state:'pending',missKm:null
+      })));
+    }catch{/* corrupted data */ }
   }
-  private resolveQueue(gun: Gun): SavedShot[] {
-    const byId = new Map(this.shots().map(shot => [shot.id, shot]));
-    return this.queues()[gun].map(id => byId.get(id)).filter((shot): shot is SavedShot => !!shot);
-  }
-  setUnit(next: Unit): void {
-    if (next === this.unit()) return;
-    const n = this.distanceKm();
-    this.unit.set(next);
-    if (Number.isFinite(n)) this.distance.set(next === 'm' ? String(Number((n * 1000).toFixed(2))) : String(Number(n.toFixed(4))));
-  }
-  setMode(mode: ChargeMode): void { this.mode.set(mode); this.notice.set(''); }
-  setCharge(charge: number): void {
-    this.manualCharge.set(charge);
-    this.mode.set('manual');
-  }
-  setMaxAngle(value: string): void {
-    const n = Number(value);
-    if (Number.isFinite(n)) this.maxAngle.set(Math.min(60, Math.max(1, n)));
-  }
-  setShell(value: string): void { if (this.shells.some(shell => shell === value)) this.shell.set(value); }
-  setTab(tab: Tab): void { this.tab.set(tab); this.notice.set(''); }
-  openMappedSolution(solution: {bearing:number;distanceKm:number;target:string}): void {
-    this.bearing.set(solution.bearing.toFixed(2));
-    this.unit.set('km');
-    this.distance.set(solution.distanceKm.toFixed(4));
-    this.target.set(solution.target);
-    // Preserve the map's minimum-charge firing solution during handoff.
-    this.manualCharge.set(Math.ceil(solution.distanceKm / 5));
-    this.mode.set('manual');
-    this.tab.set('calculator');
-    this.notice.set('Map solution loaded. Choose your shell and log the shot when ready.');
-  }
-
-  firingCard(): string | null {
-    const s = this.solution();
-    if (!s) return null;
-    return [
-      'IRON NEST • FIRE CONTROL',
-      `Target: ${this.target().trim() || 'Unmarked'}`,
-      `Shell: ${this.shell()} | Bearing: ${s.bearing}°`,
-      `Distance: ${s.distanceKm.toFixed(2)} km`,
-      `Powder: ${s.charge} | Elevation: ${s.elevation.toFixed(2)}°`,
-      ...(this.effectiveFlightSeconds() !== null
-        ? [`Flight time: ${this.effectiveFlightSeconds()!.toFixed(2)} seconds (${this.flightIsMeasured() ? 'measured' : 'experimental estimate'})`]
-        : []),
-      ...(this.fireTime() ? [`Fire at: ${this.fireTime()!.display}${this.fireTime()!.previousDay ? ' (previous day)' : ''} (${this.flightIsMeasured() ? 'measured' : 'estimated flight time'})`] : [])
-    ].join('\n');
-  }
-  openTrainSolution(solution: {bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void {
-    this.bearing.set(solution.bearing.toFixed(2));
-    this.unit.set('km');
-    this.distance.set(solution.distanceKm.toFixed(4));
-    this.target.set(solution.target);
-    this.manualCharge.set(Math.ceil(solution.distanceKm/5));
-    this.mode.set('manual');
-    this.targetTime.set(solution.impactClock);
-    this.flightSeconds.set(solution.flightSeconds);
-    this.advanced.set(true);
-    this.tab.set('calculator');
-    this.notice.set('Train impact point loaded. Timing requires measured projectile flight time.');
-  }
-  async copySolution(): Promise<void> {
-    const card = this.firingCard();
-    if (!card) return;
-    try {
-      await navigator.clipboard.writeText(card);
-      this.notice.set('Firing card copied.');
-    } catch { this.notice.set('Copy unavailable in this browser.'); }
-  }
-  logShot(): void {
-    const s = this.solution();
-    if (!s) return;
-    const shot: SavedShot = {
-      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now()) + String(Math.random()),
-      createdAt: new Date().toISOString(),
-      target: this.target().trim().slice(0, 40) || 'Unnamed target',
-      shell: this.shell(),
-      bearing: s.bearing,
-      distanceKm: s.distanceKm,
-      charge: s.charge,
-      elevation: s.elevation,
-      fireAt: this.fireTime()?.display ?? null
-    };
-    this.shots.update(shots => [shot, ...shots].slice(0, 100));
-    const known = new Set(this.shots().map(item => item.id));
-    this.queues.update(guns => ({
-      '1': guns['1'].filter(id => known.has(id)),
-      '2': guns['2'].filter(id => known.has(id))
-    }));
-    this.notice.set('Shot added to firing log.');
-  }
-  removeShot(id: string): void {
-    this.shots.update(shots => shots.filter(shot => shot.id !== id));
-    this.queues.update(guns => ({
-      '1': guns['1'].filter(item => item !== id),
-      '2': guns['2'].filter(item => item !== id)
-    }));
-  }
-  clearShots(): void {
-    if (!window.confirm('Clear the firing log and both gun queues?')) return;
-    this.shots.set([]);
-    this.queues.set({ '1': [], '2': [] });
-    this.notice.set('Shot log cleared.');
-  }
-  assignToGun(id: string, gun: Gun): void {
-    if (!this.shots().some(s => s.id === id)) return;
-    const previous = this.queues();
-    if (!previous[gun].includes(id) && previous[gun].length >= 7) {
-      this.notice.set(`Gun ${gun} queue is full (7/7).`);
-      return;
+  @HostListener('document:keydown.escape')
+  closeModal():void{this.modal.set(null);this.selectedMissShot.set(null);}
+  selectTab(tab:Tab):void{this.tab.set(tab);this.error.set('');}
+  setChargeMode(value:string):void{this.chargeMode.set(Number(value));}
+  private makeShot(input:{label:string;bearing:number;distanceKm:number;charges:number;shell?:string}):void{
+    const angle=elevationAt(input.distanceKm,input.charges);
+    if(angle===null||!Number.isFinite(input.bearing)||input.bearing<0||input.bearing>360){
+      this.error.set('Invalid firing solution: check range, bearing and powder.');return;
     }
-    const next: Record<Gun, string[]> = {
-      '1': previous['1'].filter(item => item !== id),
-      '2': previous['2'].filter(item => item !== id)
+    const shot:ShotCard={
+      id:uid(),label:input.label.trim().slice(0,60)||'Target',createdAt:new Date().toISOString(),
+      shell:input.shell??this.shell(),bearing:input.bearing,distanceKm:input.distanceKm,
+      charges:input.charges,elevation:angle,state:'pending',missKm:null
     };
-    next[gun] = [...next[gun], id];
-    this.queues.set(next);
-    this.notice.set(`Shot assigned to Gun ${gun}.`);
+    this.shots.update(rows=>[shot,...rows].slice(0,200));
+    this.activeShotId.set(shot.id);this.tab.set('shots');this.error.set('');
   }
-  unassign(id: string, gun: Gun): void {
-    this.queues.update(q => ({ ...q, [gun]: q[gun].filter(item => item !== id) }));
-  }
-  moveInQueue(gun: Gun, id: string, shift: number): void {
-    const original = this.queues()[gun];
-    const i = original.indexOf(id), nextIndex = i + shift;
-    if (i === -1 || nextIndex < 0 || nextIndex >= original.length) return;
-    const next = [...original];
-    [next[i], next[nextIndex]] = [next[nextIndex], next[i]];
-    this.queues.update(q => ({ ...q, [gun]: next }));
-  }
-  autoSort(): void {
-    const first: string[] = [], second: string[] = [];
-    for (const shot of this.shots().slice(0, 14)) {
-      if (first.length <= second.length) first.push(shot.id);
-      else second.push(shot.id);
+  addManual():void{
+    const charge=this.currentCharges();
+    if(charge===null||this.elevation()===null){
+      this.error.set('Enter a valid bearing and distance (up to 30 km).');return;
     }
-    this.queues.set({ '1': first, '2': second });
-    this.notice.set('Latest 14 logged shots split across both guns.');
+    this.makeShot({label:this.label(),bearing:this.manualBearing(),
+      distanceKm:this.manualDistance(),charges:charge,shell:this.shell()});
   }
+  addFromPlot(data:PlotFireRequest):void{
+    const charge=Math.ceil(data.distanceKm/5);
+    this.makeShot({...data,charges:charge});
+  }
+  addFromTrain(data:{bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void{
+    const charge=Math.ceil(data.distanceKm/5);
+    this.makeShot({label:data.target,bearing:data.bearing,distanceKm:data.distanceKm,charges:charge});
+  }
+  markHit(id:string):void{
+    this.shots.update(rows=>rows.map(s=>s.id===id?{...s,state:'hit',missKm:null}:s));
+    this.activeShotId.set(id);
+  }
+  openMiss(id:string):void{
+    this.selectedMissShot.set(id);this.activeShotId.set(id);
+    this.missInput.set('');this.modal.set('miss');
+  }
+  saveMiss():void{
+    const id=this.selectedMissShot();
+    if(!id||!this.missInput().trim())return;
+    const miss=Number(this.missInput().trim().replace(',','.'));
+    const shot=this.missShot();
+    if(!shot||!Number.isFinite(miss)||miss===0||!Number.isFinite(shot.distanceKm-miss)||
+      shot.distanceKm-miss<=0){
+      this.error.set('Enter a non-zero signed miss in kilometres. + beyond, − short.');return;
+    }
+    this.shots.update(rows=>rows.map(s=>s.id===id?
+      {...s,state:'miss',missKm:miss}:s));
+    this.error.set('');this.closeModal();
+  }
+  suggestedAngle(shot:ShotCard):number|null{
+    return shot.missKm===null?null:elevationAt(shot.distanceKm-shot.missKm,shot.charges);
+  }
+  retry(shot:ShotCard):void{
+    if(shot.missKm===null)return;
+    const target=shot.distanceKm-shot.missKm;
+    const charge=elevationAt(target,shot.charges)!==null?
+      shot.charges:Math.ceil(target/5);
+    this.makeShot({label:shot.label+' (corrected)',bearing:shot.bearing,
+      distanceKm:target,charges:charge,shell:shot.shell});
+  }
+  removeShot(id:string):void{
+    this.shots.update(rows=>rows.filter(s=>s.id!==id));
+    if(this.activeShotId()===id)this.activeShotId.set(this.shots()[0]?.id??null);
+  }
+  resetReport(shot:ShotCard):void{
+    this.shots.update(rows=>rows.map(s=>s.id===shot.id?{...s,state:'pending',missKm:null}:s));
+  }
+  openAbout():void{this.modal.set('about');}
 }
