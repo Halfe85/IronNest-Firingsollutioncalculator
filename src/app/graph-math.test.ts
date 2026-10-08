@@ -21,7 +21,7 @@ test('Gibraltar reference chain solves Mole, then pauses for ambiguous Dockmaste
   assert.equal(cruiser.status,'blocked');
 });
 test('user selecting a Dockmaster candidate unlocks Rockingham downstream',()=>{
-  const chosen=GIBRALTAR_MISSION.map(n=>n.id==='dock'?{...n,chosenCandidate:0}:n);
+  const chosen=GIBRALTAR_MISSION.map(n=>n.id==='dock'?{...n,chosenCandidate:1}:n);
   const solved=solvePlotGraph(chosen);
   assert.equal(solved.get('dock')?.status,'located');
   const ship=solved.get('cruiser');
