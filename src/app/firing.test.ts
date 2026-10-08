@@ -54,3 +54,31 @@ test('user-provided October 8 field examples match calculated elevation', () => 
   assert.equal(first?.charge, 3);
   assert.equal(second?.charge, 3);
 });
+
+test('seven additional user-reported firing observations, including one discrepancy', () => {
+  const observations = [
+    { bearing: 251.1, distanceKm: 6.21, reportedElevation: 37.26, computedElevation: 37.26 },
+    // Reported 55.92° differs from 9.22 km at 2 charges (55.32°).
+    // 55.92° would correspond to 9.32 km. Preserve the report for field verification.
+    { bearing: 264.6, distanceKm: 9.22, reportedElevation: 55.92, computedElevation: 55.32 },
+    { bearing: 251.6, distanceKm: 5.85, reportedElevation: 35.10, computedElevation: 35.10 },
+    { bearing: 217.5, distanceKm: 7.57, reportedElevation: 45.42, computedElevation: 45.42 },
+    { bearing: 217.9, distanceKm: 7.20, reportedElevation: 43.20, computedElevation: 43.20 },
+    { bearing: 212.7, distanceKm: 8.88, reportedElevation: 53.28, computedElevation: 53.28 },
+    { bearing: 212.8, distanceKm: 8.90, reportedElevation: 53.40, computedElevation: 53.40 }
+  ];
+  for (const sample of observations) {
+    const solution = firingSolution({
+      bearing: sample.bearing,
+      distanceKm: sample.distanceKm,
+      charge: 2
+    });
+    assert.equal(solution?.elevation.toFixed(2), sample.computedElevation.toFixed(2));
+    assert.equal(solution?.bearing, sample.bearing);
+    assert.equal(solution?.charge, 2);
+  }
+  const discrepancies = observations.filter(s => Math.abs(s.reportedElevation - s.computedElevation) > 0.005);
+  assert.equal(discrepancies.length, 1);
+  assert.equal(discrepancies[0].bearing, 264.6);
+  assert.ok(Math.abs(discrepancies[0].reportedElevation - discrepancies[0].computedElevation - 0.6) < 1e-9);
+});
