@@ -42,3 +42,15 @@ test('manual time on target crosses midnight correctly', () => {
   assert.equal(calculateFireTime('12:00', -1), null);
   assert.equal(calculateFireTime('12:00', NaN), null);
 });
+
+test('user-provided October 8 field examples match calculated elevation', () => {
+  // The bearings are azimuths and do not alter elevation in this game formula.
+  const first = firingSolution({ distanceKm: 14.94, bearing: 66.5, charge: 3 });
+  const second = firingSolution({ distanceKm: 10.83, bearing: 68.8, charge: 3 });
+  assert.equal(first?.elevation.toFixed(2), '59.76');
+  assert.equal(second?.elevation.toFixed(2), '43.32');
+  assert.equal(first?.bearing, 66.5);
+  assert.equal(second?.bearing, 68.8);
+  assert.equal(first?.charge, 3);
+  assert.equal(second?.charge, 3);
+});
