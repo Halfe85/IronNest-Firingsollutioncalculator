@@ -1,6 +1,31 @@
 <main class="plotter-layout">
   <section class="map-panel" aria-label="IRON NEST tactical map">
-    <div class="map-header"><div><span class="map-index">01 // TACTICAL POSITIONING</span><h2>Automatic map plotter</h2><p>20 × 10 km · A–T west–east · 1–10 south–north</p></div><button class="small-btn" type="button" (click)="resetExample()">RESET EXAMPLE</button></div>
+    <div class="map-header">
+      <div><span class="map-index">01 // DYNAMIC MISSION INTELLIGENCE</span><h2>Mission plotter</h2>
+        <p>Enter each playthrough's actual order. Sample missions are optional.</p>
+      </div>
+      <button class="small-btn" type="button" (click)="newMission()">+ NEW RUN</button>
+    </div>
+    <div class="mission-panel">
+      <label class="mission-name"><span>MISSION NAME</span><input type="text" maxlength="60" [value]="missionName()" (input)="setMissionName($any($event.target).value)" placeholder="e.g. Ciudad Real - artillery"></label>
+      <div class="mission-commands">
+        <button type="button" (click)="saveMission()">SAVE MISSION</button>
+        <button type="button" (click)="loadArtilleryExample()">LOAD ARTILLERY EXAMPLE</button>
+        <button type="button" (click)="resetExample()">LOAD TRIANGULATION EXAMPLE</button>
+      </div>
+      <label class="snapshot-select"><span>LOAD SAVED PLAYTHROUGH</span><select (change)="loadMission($any($event.target).value);$any($event.target).value=''" aria-label="Load saved mission snapshot">
+        <option value="">Choose a saved mission...</option>
+        @for(snapshot of savedMissions(); track snapshot.id){<option [value]="snapshot.id">{{ snapshot.name }} · {{ snapshot.createdAt | date:'short' }}</option>}
+      </select></label>
+      @if(savedMissions().length){
+        <div class="saved-missions">
+          @for(snapshot of savedMissions();track snapshot.id){
+            <div class="saved-mission"><span>{{snapshot.name}}</span>
+            <button type="button" (click)="deleteMission(snapshot.id)" [attr.aria-label]="'Delete saved mission '+snapshot.name">×</button></div>
+          }
+        </div>
+      }
+    </div>
     <div class="map-toolbar"><span class="map-legend"><i class="legend-nest"></i> Nest</span><span class="map-legend"><i class="legend-spotter"></i> Spotters</span><span class="map-legend"><i class="legend-target"></i> Target</span><button type="button" (click)="showFineGrid.set(!showFineGrid())" [attr.aria-pressed]="showFineGrid()">{{ showFineGrid()?'HIDE':'SHOW' }} SUB-GRID</button></div>
     <div class="map-scroll" tabindex="0" role="region" aria-label="Scrollable tactical map; scroll horizontally on smaller screens">
       <svg class="map-svg" viewBox="0 0 1020 545" role="img" aria-label="Map of the Iron Nest, spotters, reported bearing rays, distance circles and estimated enemy target" (click)="inspectMap($event)">
@@ -48,10 +73,20 @@
               <text class="marker-label" [attr.x]="x(p.x)+13" [attr.y]="y(p.y)-11">{{ marker.key==='nest'?'NEST':marker.key.slice(-1) }}</text>
             }
           }
-          @if(candidate();as c){
-            <circle [attr.cx]="x(c.position.x)" [attr.cy]="y(c.position.y)" r="17" fill="#f5896c" fill-opacity=".17" stroke="#ff977a" stroke-width="1.7"/>
-            <path [attr.d]="'M'+(x(c.position.x)-10)+' '+y(c.position.y)+'h20 M'+x(c.position.x)+' '+(y(c.position.y)-10)+'v20'" stroke="#ff9b7b" stroke-width="2"/>
-            <text class="target-label" [attr.x]="x(c.position.x)+15" [attr.y]="y(c.position.y)+22">{{ c.grid }}</text>
+          @for(plot of targetPlots();track plot.id){
+            @for(c of plot.candidates;track $index){
+              <circle [attr.cx]="x(c.position.x)" [attr.cy]="y(c.position.y)"
+                [attr.r]="activeTargetId()===plot.id?16:11"
+                [attr.fill]="activeTargetId()===plot.id?'#f5896c':'#efba6b'"
+                fill-opacity=".14" [attr.stroke]="activeTargetId()===plot.id?'#ff977a':'#d6ab64'"
+                stroke-width="1.7"/>
+              <path [attr.d]="'M'+(x(c.position.x)-8)+' '+y(c.position.y)+'h16 M'+x(c.position.x)+' '+(y(c.position.y)-8)+'v16'"
+                [attr.stroke]="activeTargetId()===plot.id?'#ff9b7b':'#ffe1a1'"
+                stroke-width="2"/>
+              <text class="target-label" [attr.x]="x(c.position.x)+13" [attr.y]="y(c.position.y)+22">
+                {{ plot.name }} · {{ c.grid }}{{ plot.candidates.length>1 ? ' (?)' : '' }}
+              </text>
+            }
           }
         </g>
         <text x="970" y="528" text-anchor="end" class="scale-label">1 CELL = 1 KM · EACH SUBCELL = 100 M</text>
@@ -59,10 +94,26 @@
       </svg>
     </div>
     <div class="map-caption"><span>Swipe sideways on a phone to inspect the map.</span>@if(cursorGrid()){<strong>Cursor: {{ cursorGrid() }}</strong>}</div>
-    <div class="coordinate-section"><div class="mini-section-heading">FRIENDLY POSITIONS <span>EDITABLE</span></div><div class="coordinate-grid">
+    <div class="coordinate-section"><div class="mini-section-heading">FRIENDLY POSITIONS <span>PER PLAYTHROUGH</span></div><div class="coordinate-grid">
       @for(key of positionKeys;track key){<label class="coordinate-field"><span>{{ positionNames[key] }}</span><input type="text" [value]="posLabel(key)" (input)="setPosition(key,$any($event.target).value)" placeholder="e.g. S9 0:5" [attr.aria-label]="positionNames[key]+' grid coordinate'"></label>}
     </div></div>
-    <div class="reports-section"><div class="mini-section-heading">SPOTTER REPORTS <span>TRIANGULATION EVIDENCE</span></div>
+    <div class="targets-section">
+      <div class="mini-section-heading">HOSTILE TARGETS <span>{{ targets().length }} / 25</span></div>
+      <div class="target-selector" role="group" aria-label="Select target">
+        @for(target of targets();track target.id){
+          <button class="mission-target" type="button" [class.selected]="activeTargetId()===target.id"
+            [attr.aria-pressed]="activeTargetId()===target.id" (click)="selectTarget(target.id)">
+            <strong>{{ target.name }}</strong><small>{{ targetStatus(target.id) }}</small>
+          </button>
+        }
+        <button class="add-mission-target" type="button" (click)="addTarget()">+ ADD TARGET</button>
+      </div>
+      <div class="target-edit">
+        <label><span>SELECTED TARGET NAME</span><input maxlength="40" type="text" [value]="targetName()" (input)="renameTarget($any($event.target).value)" placeholder="Artillery #1"></label>
+        <button type="button" (click)="removeTarget()" [disabled]="targets().length===1">REMOVE TARGET</button>
+      </div>
+    </div>
+    <div class="reports-section"><div class="mini-section-heading">INTELLIGENCE FOR {{ targetName() || 'CURRENT TARGET' }} <span>OBSERVATIONS</span></div>
       @for(report of reports();track report.id){
         <div class="report-row">
           <label><span>Observer</span><select [value]="report.observer" (change)="updateReport(report.id,'observer',$any($event.target).value)"><option value="spotter1">Spotter #1</option><option value="spotter2">Spotter #2</option><option value="spotter3">Spotter #3</option></select></label>
@@ -88,7 +139,7 @@
         @if(result().candidates.length>1){<p class="multi-info">{{ result().candidates.length }} positions match the current reports. Add another observation to eliminate ambiguity.</p><div class="candidate-tabs">@for(option of result().candidates;track $index){<button type="button" [class.selected]="candidate()===option" (click)="chooseCandidate($index)">{{ option.grid }}</button>}</div>}
         <div class="target-metrics"><div><span>BEARING FROM NEST</span><strong>{{ c.bearing | number:'1.2-2' }}°</strong></div><div><span>DISTANCE FROM NEST</span><strong>{{ c.rangeKm | number:'1.2-2' }} km</strong></div><div><span>COMPASS FROM NEST</span><strong>{{ c.sector }}</strong></div><div><span>REPORTS MATCHED</span><strong>{{ c.observationsMatched }}</strong></div></div>
         @if(firing();as f){<div class="gun-math"><div class="map-index">03 // SUGGESTED FIRING SOLUTION</div><div class="gun-math-values"><div><span>CHARGES</span><strong>{{ f.charge }}</strong></div><div><span>ELEVATION</span><strong>{{ f.elevation | number:'1.2-2' }}°</strong></div></div><p>Minimum reachable powder charge; change it in the calculator for a flatter shot. Game formula: distance × 12 ÷ charges.</p></div>}
-        <label class="target-name"><span>Target name</span><input type="text" maxlength="40" [value]="targetName()" (input)="targetName.set($any($event.target).value)"></label>
+        <label class="target-name"><span>Target name</span><input type="text" maxlength="40" [value]="targetName()" (input)="renameTarget($any($event.target).value)"></label>
         <button class="plot-primary" type="button" (click)="applySolution()">USE IN FIRING CALCULATOR →</button>
         <button class="plot-secondary" type="button" (click)="saveTarget()">+ SAVE TARGET MARKER</button>
       } @else {
@@ -100,6 +151,6 @@
       @if(!savedTargets().length){<p class="empty-saved">Save plotted targets to keep their markers visible on this device.</p>}
       @for(saved of savedTargets();track saved.id){<div class="saved-line"><span><b>{{ saved.name }}</b><small>{{ saved.grid }}</small></span><button type="button" [attr.aria-label]="'Remove saved target '+saved.name" (click)="removeSaved(saved.id)">×</button></div>}
     </section>
-    <p class="plot-disclaimer">Map coordinates are approximations at 100 m resolution. Spotter bearings and range are measured from each spotter; firing bearing and range are always recomputed from Iron Nest. Check your game map and current turret position before using the result.</p>
+    <p class="plot-disclaimer">Coordinate axis orientation is provisional and should be calibrated against a screenshot of the in-game map. Contradictory bearings are deliberately flagged instead of producing a firing angle. Map coordinates are approximations at 100 m resolution. Spotter bearings and range are measured from each spotter; firing bearing and range are always recomputed from Iron Nest. Check your game map and current turret position before using the result.</p>
   </aside>
 </main>
