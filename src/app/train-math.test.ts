@@ -70,7 +70,7 @@ test('new Valle de Mula playthrough keeps its C2 5:6 Iron Nest position',()=>{
   assert.equal(outcome.ok,true);
   if(!outcome.ok)return;
   assert.equal(outcome.result.grid,'N6 0:4');
-  assert.ok(Math.abs(outcome.result.distanceKm-11.166)<0.02);
+  assert.ok(Math.abs(outcome.result.rangeKm-11.166)<0.02);
   assert.ok(outcome.result.bearingFromNest>60 && outcome.result.bearingFromNest<90);
 });
 test('High Tide route math can reuse a reference and speed while leaving actual mission ETA editable',()=>{
