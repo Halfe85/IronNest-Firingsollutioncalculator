@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
+import { MapPlotterComponent } from './map-plotter';
 import { Component, computed, effect, signal } from '@angular/core';
 import {
   CHARGES, SHELLS, calculateFireTime, elevationAt, firingSolution, selectCharge,
   type ChargeMode, type FireTime
 } from './firing';
 
-type Tab = 'calculator' | 'log';
+type Tab = 'calculator' | 'map' | 'log';
 type Unit = 'km' | 'm';
 type Gun = '1' | '2';
 
@@ -32,7 +33,7 @@ const MODES: ReadonlyArray<{ id: ChargeMode; name: string; sub: string }> = [
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MapPlotterComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -161,6 +162,14 @@ export class AppComponent {
   }
   setShell(value: string): void { if (this.shells.some(shell => shell === value)) this.shell.set(value); }
   setTab(tab: Tab): void { this.tab.set(tab); this.notice.set(''); }
+  openMappedSolution(solution: {bearing:number;distanceKm:number;target:string}): void {
+    this.bearing.set(solution.bearing.toFixed(2));
+    this.unit.set('km');
+    this.distance.set(solution.distanceKm.toFixed(4));
+    this.target.set(solution.target);
+    this.tab.set('calculator');
+    this.notice.set('Map solution loaded. Choose your shell and log the shot when ready.');
+  }
 
   firingCard(): string | null {
     const s = this.solution();

@@ -46,3 +46,15 @@ This is **game math**, not real-world ballistics. The published relationship is 
 Inspired by [Joe Oakley's unofficial Fire Control Calculator](https://joeoakley52.github.io/UNOFFICIAL-Iron-Nest-FCC/); independent Angular implementation, not a copied site.
 
 Not affiliated with or endorsed by the game's developers.
+
+## Tactical map & triangulation
+
+Open the new **Tactical map** tab for a responsive 20-column (A–T) × 10-row (1–10, bottom to top) in-game map. Every major square is 1 km; coordinates like `N7 9:6` use a 10×10 subdivision (100 m each).
+
+Set the positions of Iron Nest and three spotters, then enter range, bearing, or 16-point compass-direction observations. The app geometrically intersects forward bearing rays and range circles, filters them by compass reports, and shows any surviving target coordinates. If more than one possible target exists, add more evidence or choose a candidate; ambiguity is never hidden.
+
+**Sample input**: Iron Nest `S9 0:5`, Spotter #1 `P7 1:3` reports SSW, Spotter #2 `O8 2:5` reports 6.57 km, Spotter #3 `N7 9:6` reports 187°. Target estimates around `N2 2:0`; bearing from Nest **212.56°**, range **8.89 km**, two charges **53.36°**.
+
+Tap **Use in firing calculator** to transfer target name, Nest-relative bearing and range. Save markers locally; the map and reports remain available after refresh. Drag sideways on narrow phone displays; toggle the 100 m subgrid for close inspection.
+
+**Limitations:** The geometry assumes 1 km cells with sub-digits treated as 100 m point offsets from each cell's bottom-left. Player-map marker placement can introduce ~100 m uncertainty. Values are based on reported distances, bearings and compass sectors; corroborate in the current game before firing. The map is a locally drawn coordinate map, not a copy of the game's terrain artwork.

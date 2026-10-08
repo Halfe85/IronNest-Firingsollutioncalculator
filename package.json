@@ -6,7 +6,7 @@
   "scripts": {
     "start": "ng serve --host 0.0.0.0",
     "build": "ng build",
-    "test": "node --experimental-strip-types --test src/app/firing.test.ts"
+    "test": "node --experimental-strip-types --test src/app/*.test.ts"
   },
   "dependencies": {
     "@angular/common": "~21.2.0",

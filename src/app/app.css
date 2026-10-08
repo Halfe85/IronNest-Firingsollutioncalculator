@@ -163,3 +163,6 @@ input:focus,select:focus { border-color:var(--gold); box-shadow:0 0 0 2px rgba(2
 @media(max-width:700px) { .result-column { grid-template-columns:1fr; } .build-label { display:none; } .topbar { padding:13px 15px; } .workbench { padding:23px 14px 0; } .intro { margin-bottom:18px; } .input-panel,.solution-panel,.log-panel,.gun-panel { padding:19px 16px; } .range-panel { padding:18px 16px; } .footer { display:block; } .footer p { margin-top:9px; } }
 @media(max-width:390px) { .brand-name { font-size:18px; } .brand-kicker { font-size:8px; letter-spacing:1.5px; } .brand-emblem { width:37px; height:37px; } .github-link { padding:9px; font-size:9px; } .field-grid { grid-template-columns:1fr; gap:13px; } .charge-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .mode-grid { grid-template-columns:1fr 1fr; gap:6px; } .mode-choice { padding:10px 8px; font-size:11px; } .tabbar button { padding:13px 9px; gap:6px; } .shot-values span { font-size:9px; } .queued-info small { font-size:9px; } }
 @media(prefers-reduced-motion:no-preference) { button { transition:background-color .14s,border-color .14s,color .14s; } }
+
+/* Three touch-friendly tabs, scroll horizontally instead of compressing labels. */
+.tabbar{overflow-x:auto;scrollbar-width:thin}.tabbar button{flex:none;white-space:nowrap}

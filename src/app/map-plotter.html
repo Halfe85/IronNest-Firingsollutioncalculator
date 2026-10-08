@@ -1,0 +1,105 @@
+<main class="plotter-layout">
+  <section class="map-panel" aria-label="IRON NEST tactical map">
+    <div class="map-header"><div><span class="map-index">01 // TACTICAL POSITIONING</span><h2>Automatic map plotter</h2><p>20 × 10 km · A–T west–east · 1–10 south–north</p></div><button class="small-btn" type="button" (click)="resetExample()">RESET EXAMPLE</button></div>
+    <div class="map-toolbar"><span class="map-legend"><i class="legend-nest"></i> Nest</span><span class="map-legend"><i class="legend-spotter"></i> Spotters</span><span class="map-legend"><i class="legend-target"></i> Target</span><button type="button" (click)="showFineGrid.set(!showFineGrid())" [attr.aria-pressed]="showFineGrid()">{{ showFineGrid()?'HIDE':'SHOW' }} SUB-GRID</button></div>
+    <div class="map-scroll" tabindex="0" role="region" aria-label="Scrollable tactical map; scroll horizontally on smaller screens">
+      <svg class="map-svg" viewBox="0 0 1020 545" role="img" aria-label="Map of the Iron Nest, spotters, reported bearing rays, distance circles and estimated enemy target" (click)="inspectMap($event)">
+        <defs>
+          <clipPath id="plot-area"><rect x="54" y="37" width="920" height="460"/></clipPath>
+          <pattern id="fine-grid" width="4.6" height="4.6" patternUnits="userSpaceOnUse" patternTransform="translate(54 37)"><path d="M4.6 0H0V4.6" fill="none" stroke="#6b765e" stroke-width=".3" opacity=".7"/></pattern>
+        </defs>
+        <rect x="54" y="37" width="920" height="460" class="map-ground"/>
+        @if(showFineGrid()){<rect x="54" y="37" width="920" height="460" fill="url(#fine-grid)"/>}
+        @for(col of columns; track col; let i=$index){
+          <line [attr.x1]="x(i)" y1="37" [attr.x2]="x(i)" y2="497" class="major-grid-line"/>
+          <text class="map-axis-label" [attr.x]="x(i+.5)" y="25" text-anchor="middle">{{ col }}</text>
+        }
+        @for(row of rows;track row){
+          <line x1="54" [attr.y1]="y(row-1)" x2="974" [attr.y2]="y(row-1)" class="major-grid-line"/>
+          <text class="map-axis-label" x="32" [attr.y]="y(row-.5)+4" text-anchor="middle">{{ row }}</text>
+        }
+        <line x1="974" y1="37" x2="974" y2="497" class="major-grid-line"/>
+        <line x1="54" y1="497" x2="974" y2="497" class="major-grid-line"/>
+        <g clip-path="url(#plot-area)">
+          @for(line of lines();track line.id){
+            @if(line.origin;as p){
+              @if(line.kind==='range' && line.radius!==null){
+                <circle [attr.cx]="x(p.x)" [attr.cy]="y(p.y)" [attr.r]="line.radius*46" fill="#70b1ff" fill-opacity=".045" stroke="#86c7f6" stroke-width="1.8" stroke-dasharray="6 4"/>
+              }
+              @if(line.kind==='bearing' && line.degrees!==null){
+                <line [attr.x1]="x(p.x)" [attr.y1]="y(p.y)" [attr.x2]="line.x2" [attr.y2]="line.y2" stroke="#ffd58c" stroke-width="2.1" stroke-dasharray="9 5"/>
+              }
+              @if(line.kind==='sector' && line.sector!==null){
+                <path [attr.d]="line.wedge" fill="#e2bf7d" fill-opacity=".09" stroke="#ab915a" stroke-width=".9"/>
+              }
+            }
+          }
+          @if(candidate();as c){
+            @if(markers()[0].pos;as nest){
+              <line [attr.x1]="x(nest.x)" [attr.y1]="y(nest.y)" [attr.x2]="x(c.position.x)" [attr.y2]="y(c.position.y)" stroke="#ff9c78" stroke-width="3"/>
+            }
+          }
+          @for(saved of savedTargets();track saved.id){
+            <circle [attr.cx]="x(saved.x)" [attr.cy]="y(saved.y)" r="5" stroke="#f5b5a1" stroke-width="1.5" fill="#743e31"/>
+          }
+          @for(marker of markers();track marker.key){
+            @if(marker.pos;as p){
+              <circle [attr.cx]="x(p.x)" [attr.cy]="y(p.y)" [attr.r]="marker.key==='nest'?10:8" [attr.fill]="marker.key==='nest'?'#efba6b':'#86b6dc'" stroke="#0e1511" stroke-width="3"/>
+              <text class="marker-label" [attr.x]="x(p.x)+13" [attr.y]="y(p.y)-11">{{ marker.key==='nest'?'NEST':marker.key.slice(-1) }}</text>
+            }
+          }
+          @if(candidate();as c){
+            <circle [attr.cx]="x(c.position.x)" [attr.cy]="y(c.position.y)" r="17" fill="#f5896c" fill-opacity=".17" stroke="#ff977a" stroke-width="1.7"/>
+            <path [attr.d]="'M'+(x(c.position.x)-10)+' '+y(c.position.y)+'h20 M'+x(c.position.x)+' '+(y(c.position.y)-10)+'v20'" stroke="#ff9b7b" stroke-width="2"/>
+            <text class="target-label" [attr.x]="x(c.position.x)+15" [attr.y]="y(c.position.y)+22">{{ c.grid }}</text>
+          }
+        </g>
+        <text x="970" y="528" text-anchor="end" class="scale-label">1 CELL = 1 KM · EACH SUBCELL = 100 M</text>
+        <text x="54" y="529" class="scale-label">N ↑</text>
+      </svg>
+    </div>
+    <div class="map-caption"><span>Swipe sideways on a phone to inspect the map.</span>@if(cursorGrid()){<strong>Cursor: {{ cursorGrid() }}</strong>}</div>
+    <div class="coordinate-section"><div class="mini-section-heading">FRIENDLY POSITIONS <span>EDITABLE</span></div><div class="coordinate-grid">
+      @for(key of positionKeys;track key){<label class="coordinate-field"><span>{{ positionNames[key] }}</span><input type="text" [value]="posLabel(key)" (input)="setPosition(key,$any($event.target).value)" placeholder="e.g. S9 0:5" [attr.aria-label]="positionNames[key]+' grid coordinate'"></label>}
+    </div></div>
+    <div class="reports-section"><div class="mini-section-heading">SPOTTER REPORTS <span>TRIANGULATION EVIDENCE</span></div>
+      @for(report of reports();track report.id){
+        <div class="report-row">
+          <label><span>Observer</span><select [value]="report.observer" (change)="updateReport(report.id,'observer',$any($event.target).value)"><option value="spotter1">Spotter #1</option><option value="spotter2">Spotter #2</option><option value="spotter3">Spotter #3</option></select></label>
+          <label><span>Intel type</span><select [value]="report.kind" (change)="updateReport(report.id,'kind',$any($event.target).value)"><option value="bearing">Bearing (°)</option><option value="range">Distance (km)</option><option value="sector">Compass sector</option></select></label>
+          <label><span>Report</span>
+            @if(report.kind==='sector'){
+              <select [value]="report.value" (change)="updateReport(report.id,'value',$any($event.target).value)">@for(d of directions;track d){<option [value]="d">{{ d }}</option>}</select>
+            } @else {
+              <input type="text" inputmode="decimal" [value]="report.value" (input)="updateReport(report.id,'value',$any($event.target).value)" [placeholder]="report.kind==='range'?'6.57':'187'">
+            }
+          </label>
+          <button class="remove-report" type="button" [attr.aria-label]="'Remove report '+report.id" (click)="removeReport(report.id)">×</button>
+        </div>
+      }
+      <button type="button" class="add-report" (click)="addReport()">+ ADD OBSERVATION</button>
+    </div>
+  </section>
+
+  <aside class="plot-results">
+    <section class="plot-result-panel"><div class="result-heading"><span class="map-index">02 // TARGET ACQUISITION</span><span class="badge-live">AUTO PLOT</span></div><h2>Enemy location</h2>
+      @if(candidate();as c){
+        <div class="target-grid"><div class="target-label-heading">ESTIMATED GRID POSITION</div><div class="grid-result">{{ c.grid }}</div><p>Computed X {{ c.position.x.toFixed(3) }} km / Y {{ c.position.y.toFixed(3) }} km</p></div>
+        @if(result().candidates.length>1){<p class="multi-info">{{ result().candidates.length }} positions match the current reports. Add another observation to eliminate ambiguity.</p><div class="candidate-tabs">@for(option of result().candidates;track $index){<button type="button" [class.selected]="candidate()===option" (click)="chooseCandidate($index)">{{ option.grid }}</button>}</div></div>}
+        <div class="target-metrics"><div><span>BEARING FROM NEST</span><strong>{{ c.bearing | number:'1.2-2' }}°</strong></div><div><span>DISTANCE FROM NEST</span><strong>{{ c.rangeKm | number:'1.2-2' }} km</strong></div><div><span>COMPASS FROM NEST</span><strong>{{ c.sector }}</strong></div><div><span>REPORTS MATCHED</span><strong>{{ c.observationsMatched }}</strong></div></div>
+        @if(firing();as f){<div class="gun-math"><div class="map-index">03 // SUGGESTED FIRING SOLUTION</div><div class="gun-math-values"><div><span>CHARGES</span><strong>{{ f.charge }}</strong></div><div><span>ELEVATION</span><strong>{{ f.elevation | number:'1.2-2' }}°</strong></div></div><p>Low-angle mode, maximum preferred elevation 45°. Game formula: distance × 12 ÷ charges.</p></div>}
+        <label class="target-name"><span>Target name</span><input type="text" maxlength="40" [value]="targetName()" (input)="targetName.set($any($event.target).value)"></label>
+        <button class="plot-primary" type="button" (click)="applySolution()">USE IN FIRING CALCULATOR →</button>
+        <button class="plot-secondary" type="button" (click)="saveTarget()">+ SAVE TARGET MARKER</button>
+      } @else {
+        <div class="plot-empty"><span>⊕</span><strong>Awaiting intersection</strong><p>{{ result().error }}</p></div>
+      }
+      @if(notice()){<p class="plot-notice" role="status">{{ notice() }}</p>}
+    </section>
+    <section class="saved-panel"><div class="mini-section-heading">SAVED TARGET MARKERS <span>{{ savedTargets().length }} / 50</span></div>
+      @if(!savedTargets().length){<p class="empty-saved">Save plotted targets to keep their markers visible on this device.</p>}
+      @for(saved of savedTargets();track saved.id){<div class="saved-line"><span><b>{{ saved.name }}</b><small>{{ saved.grid }}</small></span><button type="button" [attr.aria-label]="'Remove saved target '+saved.name" (click)="removeSaved(saved.id)">×</button></div>}
+    </section>
+    <p class="plot-disclaimer">Map coordinates are approximations at 100 m resolution. Spotter bearings and range are measured from each spotter; firing bearing and range are always recomputed from Iron Nest. Check your game map and current turret position before using the result.</p>
+  </aside>
+</main>
