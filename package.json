@@ -1,0 +1,25 @@
+{
+  "name": "iron-nest-firing-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "ng serve --host 0.0.0.0",
+    "build": "ng build",
+    "test": "node --experimental-strip-types --test src/app/firing.test.ts"
+  },
+  "dependencies": {
+    "@angular/common": "~21.2.0",
+    "@angular/compiler": "~21.2.0",
+    "@angular/core": "~21.2.0",
+    "@angular/platform-browser": "~21.2.0",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@angular/build": "~21.2.0",
+    "@angular/cli": "~21.2.0",
+    "@angular/compiler-cli": "~21.2.0",
+    "typescript": "~5.9.3"
+  }
+}

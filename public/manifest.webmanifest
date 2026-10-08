@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Iron Nest — Fire Control Calculator",
+  "short_name": "Iron Nest FCC",
+  "description": "Unofficial firing solution calculator for the Iron Nest game",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101512",
+  "theme_color": "#111714",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-emblem" aria-hidden="true">✦</span><div><div class="brand-kicker">UNOFFICIAL FIELD COMPUTER</div><div class="brand-name">IRON <strong>NEST</strong><span class="brand-suffix"> / FCC</span></div></div></div>
+    <a class="github-link" href="https://github.com/Halfe85/IronNest-Firingsollutioncalculator" target="_blank" rel="noopener noreferrer" aria-label="Open project on GitHub">SOURCE ↗</a>
+  </header>
+  <div class="workbench">
+    <div class="intro"><div><p class="eyebrow"><span class="status-lamp"></span> SYSTEM ONLINE // FIELD CONSOLE</p><h1>Fire Control <span>Calculator</span></h1><p class="subtitle">Game firing solutions, without the paperwork.</p></div><div class="build-label">CALIBRATION: COMMUNITY FORMULA<br>OCT 2026 · 1–6 CHARGES</div></div>
+    <nav class="tabbar" aria-label="Calculator sections">
+      <button type="button" [class.active]="tab() === 'calculator'" (click)="setTab('calculator')" [attr.aria-current]="tab() === 'calculator' ? 'page' : null"><span>01</span> Calculator</button>
+      <button type="button" [class.active]="tab() === 'log'" (click)="setTab('log')" [attr.aria-current]="tab() === 'log' ? 'page' : null"><span>02</span> Firing log <span class="count-pill">{{ shots().length }}</span></button>
+    </nav>
+
+    @if (tab() === 'calculator') {
+      <main class="calculator-grid">
+        <section class="panel input-panel" aria-labelledby="coordinates-heading">
+          <div class="panel-header"><span class="section-index">01 // TARGET DATA</span><h2 id="coordinates-heading">Coordinates</h2><p>Enter the position relative to your turret.</p></div>
+          <div class="field-grid">
+            <div class="field"><label for="bearing">Bearing <span class="field-unit">DEGREES</span></label><div class="input-wrap"><input id="bearing" type="number" min="0" max="360" step="any" inputmode="decimal" autocomplete="off" [value]="bearing()" (input)="bearing.set($any($event.target).value)"><span class="input-symbol">°</span></div></div>
+            <div class="field"><label for="distance">Target distance</label><div class="input-wrap distance-wrap"><input id="distance" type="text" inputmode="decimal" autocomplete="off" [value]="distance()" (input)="distance.set($any($event.target).value)" aria-describedby="range-help"><div class="unit-switch" aria-label="Distance units"><button type="button" [class.selected]="unit() === 'km'" (click)="setUnit('km')">km</button><button type="button" [class.selected]="unit() === 'm'" (click)="setUnit('m')">m</button></div></div></div>
+          </div>
+          <p class="small-hint" id="range-help">Range limit: 30 km with 6 charges. Decimal commas accepted.</p>
+          <div class="divider"></div>
+          <div class="field"><label for="shell">Shell type <span class="field-unit">20 AVAILABLE ROUND CODES</span></label><div class="select-wrap"><select id="shell" [value]="shell()" (change)="setShell($any($event.target).value)">@for (item of shells; track item) { <option [value]="item">{{ item }}</option> }</select></div></div>
+          <div class="field advanced-target"><label for="target">Target label <span class="field-unit">OPTIONAL</span></label><input id="target" type="text" maxlength="40" placeholder="e.g. Enemy bunker" [value]="target()" (input)="target.set($any($event.target).value)"></div>
+          <div class="divider"></div>
+          <div class="charge-heading"><div><span class="section-index">02 // PROPULSION</span><h2>Powder charges</h2></div>@if (mode() !== 'manual') { <span class="auto-indicator">AUTO</span> }</div>
+          <div class="charge-grid" role="group" aria-label="Powder charge selection">
+            @for (row of chargeRows(); track row.charge) {
+              <button type="button" class="charge-choice" [class.picked]="selectedCharge() === row.charge" [class.unreachable]="row.elevation === null" [disabled]="row.elevation === null" [attr.aria-pressed]="selectedCharge() === row.charge" (click)="setCharge(row.charge)">
+                <span class="charge-digit">{{ row.charge }}</span><span class="charge-caption">{{ row.range }} KM MAX</span>
+              </button>
+            }
+          </div>
+          <div class="mode-heading">CHARGE SELECTION MODE</div>
+          <div class="mode-grid" role="group" aria-label="Charge selection mode">
+            @for (item of modes; track item.id) {
+              <button class="mode-choice" type="button" [class.picked]="mode() === item.id" [attr.aria-pressed]="mode() === item.id" (click)="setMode(item.id)"><span class="mode-dot" aria-hidden="true"></span><span>{{ item.name }}</span></button>
+            }
+          </div>
+          @if (mode() === 'low-angle') { <div class="mode-setting"><label for="angle-cap">Maximum preferred angle</label><div class="small-input-wrap"><input id="angle-cap" type="number" min="1" max="60" step="1" [value]="maxAngle()" (change)="setMaxAngle($any($event.target).value)"><span>°</span></div></div> }
+          @if (lowAngleNote()) { <p class="small-hint warning">{{ lowAngleNote() }}</p> }
+          <div class="divider"></div>
+          <button class="toggle-advanced" type="button" [attr.aria-expanded]="advanced()" (click)="advanced.set(!advanced())"><span>TIME ON TARGET <small>OPTIONAL / ADVANCED</small></span><span>{{ advanced() ? '−' : '+' }}</span></button>
+          @if (advanced()) {
+            <div class="advanced-fields">
+              <p class="small-hint">Enter a measured flight time. The basic game equation cannot predict projectile flight time.</p>
+              <div class="field-grid"><div class="field"><label for="target-time">Target time (24h)</label><input id="target-time" type="time" step="1" [value]="targetTime()" (input)="targetTime.set($any($event.target).value)"></div><div class="field"><label for="flight-seconds">Measured flight (sec)</label><input id="flight-seconds" type="text" inputmode="decimal" placeholder="e.g. 12.4" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)"></div></div>
+              @if (targetTime() && flightSeconds() && !fireTime()) { <p class="small-hint warning">Check the time and flight seconds (0–3600).</p> }
+            </div>
+          }
+        </section>
+
+        <section class="result-column" aria-label="Calculated firing solution">
+          <div class="panel solution-panel">
+            <div class="solution-top"><span class="section-index">03 // FIRE CONTROL OUTPUT</span><span class="live-pill"><span class="status-lamp"></span> LIVE</span></div>
+            <h2>Firing solution</h2>
+            @if (solution(); as s) {
+              <div class="result-main"><div class="overline">REQUIRED GUN ELEVATION</div><div class="angle-value">{{ s.elevation | number:'1.2-2' }}<span>°</span></div><div class="solution-rule"><span class="indicator"></span><span>SOLUTION VALID · {{ s.charge }} CHARGE{{ s.charge === 1 ? '' : 'S' }}</span></div></div>
+              <div class="metrics"><div class="metric"><div class="metric-label">BEARING</div><div class="metric-value">{{ s.bearing | number:'1.0-2' }}<small>°</small></div></div><div class="metric"><div class="metric-label">POWDER</div><div class="metric-value">{{ s.charge }}<small>/ 6</small></div></div><div class="metric"><div class="metric-label">SHELL</div><div class="metric-value shell-value">{{ shell() }}</div></div><div class="metric"><div class="metric-label">RANGE</div><div class="metric-value">{{ s.distanceKm | number:'1.2-2' }}<small>km</small></div></div></div>
+              @if (fireTime(); as fire) { @if (advanced()) { <div class="fire-clock"><span>FIRE AT</span><strong>{{ fire.display }}</strong>@if (fire.previousDay) { <small>PREVIOUS DAY</small> }</div> } }
+              <div class="action-stack"><button class="primary-btn" type="button" (click)="logShot()">+ LOG SHOT</button><button class="secondary-btn" type="button" (click)="copySolution()">COPY FIRING CARD <span aria-hidden="true">↗</span></button></div>
+            } @else {
+              <div class="empty-solution"><div class="reticle" aria-hidden="true">⊕</div><h3>Awaiting valid target</h3><p>{{ solutionError() || 'Enter valid target information to calculate.' }}</p></div>
+            }
+            @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+          </div>
+          <div class="panel range-panel"><div class="charge-heading"><div><span class="section-index">04 // REFERENCE</span><h2>Charge comparison</h2></div></div><div class="comparison-head"><span>CHARGES</span><span>MAX DIST.</span><span>ELEVATION</span></div>
+            @for (row of chargeRows(); track row.charge) { <div class="comparison-row" [class.active]="selectedCharge() === row.charge"><span><b>{{ row.charge }}</b> CHG</span><span>{{ row.range }} km</span><strong>{{ row.elevation === null ? 'OUT OF RANGE' : (row.elevation | number:'1.2-2') + '°' }}</strong></div> }
+          </div>
+        </section>
+      </main>
+    } @else {
+      <main class="log-grid">
+        <section class="panel log-panel"><div class="log-title"><div><span class="section-index">01 // STORED FIRING DATA</span><h2>Firing log</h2><p>Saved only on this device.</p></div>@if (shots().length) { <button type="button" class="subtle-btn" (click)="clearShots()">CLEAR ALL</button> }</div>
+          @if (shots().length === 0) { <div class="log-empty">No shots recorded. Calculate a firing solution and tap <b>Log shot</b> to add it here.</div> }
+          @for (shot of shots(); track shot.id) {
+            <article class="shot-card"><div class="shot-top"><div><span class="shot-target">{{ shot.target }}</span><small>{{ shot.createdAt | date:'medium' }}</small></div><button type="button" class="delete-btn" [attr.aria-label]="'Remove shot '+shot.target" (click)="removeShot(shot.id)">×</button></div>
+              <div class="shot-values"><span><b>{{ shot.shell }}</b> SHELL</span><span>BRG <b>{{ shot.bearing | number:'1.0-2' }}°</b></span><span>RNG <b>{{ shot.distanceKm | number:'1.2-2' }} km</b></span><span>CHG <b>{{ shot.charge }}</b></span><span>ELV <b>{{ shot.elevation | number:'1.2-2' }}°</b></span>@if (shot.fireAt) { <span>FIRE <b>{{ shot.fireAt }}</b></span> }</div>
+              <div class="shot-actions"><button type="button" [disabled]="queues()['1'].includes(shot.id)" (click)="assignToGun(shot.id, '1')">{{ queues()['1'].includes(shot.id) ? '✓ GUN 1' : '+ GUN 1' }}</button><button type="button" [disabled]="queues()['2'].includes(shot.id)" (click)="assignToGun(shot.id, '2')">{{ queues()['2'].includes(shot.id) ? '✓ GUN 2' : '+ GUN 2' }}</button></div>
+            </article>
+          }
+        </section>
+        <section class="panel gun-panel"><div class="log-title"><div><span class="section-index">02 // TURRET QUEUE</span><h2>Gun assignments</h2><p>Tap a button to assign shots. Maximum 7 per gun.</p></div><button type="button" class="subtle-btn" [disabled]="shots().length === 0" (click)="autoSort()">AUTO SORT</button></div>
+          <div class="gun-stack">
+            <section class="gun-queue" aria-label="Gun 1 queue"><h3>GUN 1 <span>{{ gun1().length }}/7</span></h3>
+              @if (gun1().length === 0) { <p class="gun-empty">Queue empty</p> }
+              @for (shot of gun1(); track shot.id; let i = $index) { <div class="queued-shot"><span class="queue-number">{{ i + 1 }}</span><span class="queued-info"><b>{{ shot.target }}</b><small>{{ shot.shell }} · {{ shot.elevation | number:'1.2-2' }}° · {{ shot.charge }} CHG</small></span><div class="queue-actions"><button type="button" [disabled]="i === 0" (click)="moveInQueue('1', shot.id, -1)" [attr.aria-label]="'Move '+shot.target+' up'">↑</button><button type="button" [disabled]="i === gun1().length - 1" (click)="moveInQueue('1', shot.id, 1)" [attr.aria-label]="'Move '+shot.target+' down'">↓</button><button type="button" (click)="unassign(shot.id, '1')" [attr.aria-label]="'Remove '+shot.target+' from Gun 1'">×</button></div></div> }
+            </section>
+            <section class="gun-queue" aria-label="Gun 2 queue"><h3>GUN 2 <span>{{ gun2().length }}/7</span></h3>
+              @if (gun2().length === 0) { <p class="gun-empty">Queue empty</p> }
+              @for (shot of gun2(); track shot.id; let i = $index) { <div class="queued-shot"><span class="queue-number">{{ i + 1 }}</span><span class="queued-info"><b>{{ shot.target }}</b><small>{{ shot.shell }} · {{ shot.elevation | number:'1.2-2' }}° · {{ shot.charge }} CHG</small></span><div class="queue-actions"><button type="button" [disabled]="i === 0" (click)="moveInQueue('2', shot.id, -1)" [attr.aria-label]="'Move '+shot.target+' up'">↑</button><button type="button" [disabled]="i === gun2().length - 1" (click)="moveInQueue('2', shot.id, 1)" [attr.aria-label]="'Move '+shot.target+' down'">↓</button><button type="button" (click)="unassign(shot.id, '2')" [attr.aria-label]="'Remove '+shot.target+' from Gun 2'">×</button></div></div> }
+            </section>
+          </div>
+          @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+        </section>
+      </main>
+    }
+
+    <footer class="footer"><span>IRON NEST // UNOFFICIAL COMMUNITY TOOL</span><p>The formula is player-tested <b>game math</b>, not real ballistics. Verify after game patches. Flight time is not predicted. <a href="https://steamcommunity.com/app/2950790/discussions/0/588434434320143257/" target="_blank" rel="noopener noreferrer">Calculation source ↗</a> · <a href="https://joeoakley52.github.io/UNOFFICIAL-Iron-Nest-FCC/" target="_blank" rel="noopener noreferrer">Original inspiration ↗</a></p></footer>
+  </div>
+</div>
