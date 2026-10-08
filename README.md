@@ -79,3 +79,13 @@ A new **Train tracker** tab ships with the Valle de Mula mission as an editable 
 - Enter separately **measured in-game projectile flight time** to obtain the game-clock fire time. The simulator's elevation equation does not predict projectile flight time. Flight time is never fabricated.
 - Editable waypoint distances/times, position coordinates, and persistent local inputs; no external API or backend.
 - The grid projection is provisional until the in-game map axes are confirmed. A train calculation is only a prediction under the input timetable, not automatic detection of the actual engine.
+
+## Experimental projectile flight-time model
+
+A fan-made ballistics reference publishes an **experimental** charge-speed model (not official developer data): [Iron Nest Wiki community calculator](https://ironnestwiki.com/calculator), baseline game v1.0, reviewed August 10, 2026.
+
+The estimate is `flightSeconds = distanceKm / (0.7 * (0.3 + 0.7 * (3*u*u - 2*u*u*u)))` where `u = (charges-1)/5`. It does **not** include launch delay, terrain, or confirmed shell-specific variation. A separate [community guide](https://ironnestgame.wiki/guides/flight-time/) recommends using current in-game timings rather than asserting a universally verified formula.
+
+**First user-supplied timing sample (8 October 2026)**: bearing 85.6°, distance 8.94 km, 2 charges, reported elevation 53.34°, launch at :00, impact at :34, **34.0 s observed**. Experimental model predicts **34.26 s**, difference 0.26 s. Elevation model predicts **53.64°**, not the reported 53.34°; both inputs are preserved as a discrepancy. Shell type not reported. One close match is not enough to certify the model. Additional measured shots at varying distances and charges are needed.
+
+Calculator and Train Tracker now display predicted flight time and estimated fire time. A measured flight time always overrides the prediction. Estimated values are clearly labeled and should be verified in-game before precise timed intercepts.

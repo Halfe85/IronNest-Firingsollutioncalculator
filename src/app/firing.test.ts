@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateFireTime, elevationAt, firingSolution, selectCharge, validCharges } from './firing.ts';
+import { calculateFireTime, elevationAt, estimatedFlightSeconds, estimatedShellSpeedKms, firingSolution, selectCharge, validCharges } from './firing.ts';
 
 test('community firing formula: previous HCHE examples', () => {
   assert.ok(Math.abs(elevationAt(4.88, 1)! - 58.56) < 1e-10);
@@ -88,4 +88,37 @@ test('additional field example 250.4° / 11.41 km / 3 charges', () => {
   assert.equal(solution?.bearing, 250.4);
   assert.equal(solution?.charge, 3);
   assert.equal(solution?.elevation.toFixed(2), '45.64');
+});
+
+test('first measured flight time validates experimental 2-charge model within clock precision', () => {
+  const observation = {
+    bearing: 85.6,
+    distanceKm: 8.94,
+    reportedElevation: 53.34,
+    charge: 2,
+    launchSecond: 0,
+    impactSecond: 34,
+    shell: 'UNSPECIFIED'
+  };
+  const measuredSeconds = observation.impactSecond - observation.launchSecond;
+  const estimated = estimatedFlightSeconds(observation.distanceKm, observation.charge);
+  assert.ok(estimated !== null);
+  assert.ok(Math.abs(estimated - 34.26) < 0.01);
+  assert.ok(Math.abs(estimated - measuredSeconds) < 0.5);
+  // IMPORTANT: Preserve this conflicting elevation data rather than rewriting it.
+  assert.equal(elevationAt(observation.distanceKm, observation.charge)?.toFixed(2), '53.64');
+  assert.equal(observation.reportedElevation, 53.34);
+});
+
+test('fan flight model charge speeds and invalid inputs', () => {
+  const expectedKms = [0.21, 0.26096, 0.38248, 0.52752, 0.64904, 0.7];
+  for (let i = 0; i < 6; i++) {
+    assert.ok(Math.abs(estimatedShellSpeedKms(i+1)! - expectedKms[i]) < 1e-12);
+    assert.ok(estimatedFlightSeconds(4, i+1)! > 0);
+  }
+  assert.equal(estimatedFlightSeconds(8.94, 1), null);
+  assert.equal(estimatedFlightSeconds(0, 2), null);
+  assert.equal(estimatedFlightSeconds(NaN, 2), null);
+  assert.equal(estimatedShellSpeedKms(0), null);
+  assert.equal(estimatedShellSpeedKms(7), null);
 });

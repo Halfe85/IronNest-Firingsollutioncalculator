@@ -166,3 +166,8 @@ input:focus,select:focus { border-color:var(--gold); box-shadow:0 0 0 2px rgba(2
 
 /* Three touch-friendly tabs, scroll horizontally instead of compressing labels. */
 .tabbar{overflow-x:auto;scrollbar-width:thin}.tabbar button{flex:none;white-space:nowrap}
+
+.flight-estimate{border:1px solid #54694e;border-radius:6px;background:#1d2b20;padding:13px;display:grid;gap:6px;margin:0 0 14px}
+.flight-estimate span{font-size:9px;letter-spacing:1px;font-weight:850;color:#acc49f}
+.flight-estimate strong{color:#e9d3a4;font-size:23px;font-variant-numeric:tabular-nums}
+.flight-estimate small{color:#9daea0;font-size:11px;line-height:1.6}

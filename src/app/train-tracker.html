@@ -133,10 +133,11 @@
       } @else {<p class="train-error">{{ $any(calculated()).error }}</p>}
       <div class="train-flight">
         <h3>Fire timing</h3>
-        <p>Flight time must be measured in-game. The elevation formula does not predict flight duration.</p>
+        <p>Experimental flight-time estimate from charge-dependent shell speed. Measured in-game flight time overrides it; launch delay is not included.</p>
+        @if(estimatedFlight();as estimate){<div class="train-estimate"><span>ESTIMATED FLIGHT (UNVERIFIED MODEL)</span><strong>{{estimate | number:'1.2-2'}} s</strong></div>}
         <label class="train-field"><span>MEASURED PROJECTILE FLIGHT (SECONDS)</span><input type="text" inputmode="decimal" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)" placeholder="e.g. 12.4"></label>
         @if(launchTime();as fire){
-          <div class="train-launch"><span>FIRE AT GAME TIME</span><strong>{{ fire.display }}</strong>@if(fire.previousDay){<small>PREVIOUS DAY</small>}</div>
+          <div class="train-launch"><span>FIRE AT GAME TIME ({{flightIsMeasured()?'MEASURED':'ESTIMATE'}})</span><strong>{{ fire.display }}</strong>@if(fire.previousDay){<small>PREVIOUS DAY</small>}</div>
         } @else {
           <div class="train-launch muted"><span>FIRE TIME</span><strong>NOT CALCULATED</strong></div>
         }

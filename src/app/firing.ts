@@ -33,6 +33,25 @@ export function elevationAt(distanceKm: number, charges: number): number | null 
   return result >= 0 && result <= 60 + 1e-9 ? Math.min(60, result) : null;
 }
 
+
+/**
+ * Experimental community-derived in-game flight model (version 1.0 fan reference).
+ * Charge-based speed in km/s; the projectile launch delay is NOT included.
+ * Reference: https://ironnestwiki.com/calculator
+ * This estimate must be checked against observed in-game shot timing.
+ */
+export function estimatedShellSpeedKms(charges: number): number | null {
+  if (!Number.isInteger(charges) || charges < 1 || charges > 6) return null;
+  const u = (charges - 1) / 5;
+  const smoother = 3 * u * u - 2 * u * u * u;
+  return 0.7 * (0.3 + 0.7 * smoother);
+}
+export function estimatedFlightSeconds(distanceKm: number, charges: number): number | null {
+  if (elevationAt(distanceKm, charges) === null) return null;
+  const velocity = estimatedShellSpeedKms(charges);
+  return velocity === null ? null : distanceKm / velocity;
+}
+
 export function validCharges(distanceKm: number): number[] {
   return CHARGES.filter(charge => elevationAt(distanceKm, charge) !== null);
 }
@@ -80,7 +99,8 @@ export function selectCharge(
 
 /**
  * Target time is a 24h clock (HH:mm or HH:mm:ss).
- * Flight time must be observed/entered: it cannot be inferred from the elevation formula.
+ * Flight time must be supplied from observation or the experimental charge-speed model;
+ * the elevation formula alone cannot infer flight time.
  * Retains tenths of a second.
  */
 export function calculateFireTime(targetTime: string, flightSeconds: number): FireTime | null {

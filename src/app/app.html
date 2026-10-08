@@ -45,9 +45,9 @@
           <button class="toggle-advanced" type="button" [attr.aria-expanded]="advanced()" (click)="advanced.set(!advanced())"><span>TIME ON TARGET <small>OPTIONAL / ADVANCED</small></span><span>{{ advanced() ? '−' : '+' }}</span></button>
           @if (advanced()) {
             <div class="advanced-fields">
-              <p class="small-hint">Enter a measured flight time. The basic game equation cannot predict projectile flight time.</p>
+              <p class="small-hint">An experimental charge-speed model estimates flight time automatically. Enter a measured in-game time to override it. Launch delay is not included.</p>
               <div class="field-grid"><div class="field"><label for="target-time">Target time (24h)</label><input id="target-time" type="time" step="1" [value]="targetTime()" (input)="targetTime.set($any($event.target).value)"></div><div class="field"><label for="flight-seconds">Measured flight (sec)</label><input id="flight-seconds" type="text" inputmode="decimal" placeholder="e.g. 12.4" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)"></div></div>
-              @if (targetTime() && flightSeconds() && !fireTime()) { <p class="small-hint warning">Check the time and flight seconds (0–3600).</p> }
+              @if (targetTime() && !fireTime()) { <p class="small-hint warning">Check target time and any measured flight seconds (0–3600).</p> }
             </div>
           }
         </section>
@@ -59,7 +59,10 @@
             @if (solution(); as s) {
               <div class="result-main"><div class="overline">REQUIRED GUN ELEVATION</div><div class="angle-value">{{ s.elevation | number:'1.2-2' }}<span>°</span></div><div class="solution-rule"><span class="indicator"></span><span>SOLUTION VALID · {{ s.charge }} CHARGE{{ s.charge === 1 ? '' : 'S' }}</span></div></div>
               <div class="metrics"><div class="metric"><div class="metric-label">BEARING</div><div class="metric-value">{{ s.bearing | number:'1.0-2' }}<small>°</small></div></div><div class="metric"><div class="metric-label">POWDER</div><div class="metric-value">{{ s.charge }}<small>/ 6</small></div></div><div class="metric"><div class="metric-label">SHELL</div><div class="metric-value shell-value">{{ shell() }}</div></div><div class="metric"><div class="metric-label">RANGE</div><div class="metric-value">{{ s.distanceKm | number:'1.2-2' }}<small>km</small></div></div></div>
-              @if (fireTime(); as fire) { @if (advanced()) { <div class="fire-clock"><span>FIRE AT</span><strong>{{ fire.display }}</strong>@if (fire.previousDay) { <small>PREVIOUS DAY</small> }</div> } }
+              @if (fireTime(); as fire) { @if (advanced()) { <div class="fire-clock"><span>FIRE AT {{ flightIsMeasured() ? '(MEASURED)' : '(ESTIMATE)' }}</span><strong>{{ fire.display }}</strong>@if (fire.previousDay) { <small>PREVIOUS DAY</small> }</div> } }
+              @if (estimatedFlight(); as estimated) {
+                <div class="flight-estimate"><span>ESTIMATED FLIGHT TIME · COMMUNITY MODEL</span><strong>{{ estimated | number:'1.2-2' }} s</strong><small>{{ flightIsMeasured() ? 'Manual measured time overrides this estimate for firing.' : 'Experimental estimate; verify in-game before timing a moving target.' }}</small></div>
+              }
               <div class="action-stack"><button class="primary-btn" type="button" (click)="logShot()">+ LOG SHOT</button><button class="secondary-btn" type="button" (click)="copySolution()">COPY FIRING CARD <span aria-hidden="true">↗</span></button></div>
             } @else {
               <div class="empty-solution"><div class="reticle" aria-hidden="true">⊕</div><h3>Awaiting valid target</h3><p>{{ solutionError() || 'Enter valid target information to calculate.' }}</p></div>

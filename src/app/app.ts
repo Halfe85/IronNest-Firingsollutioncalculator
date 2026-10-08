@@ -3,7 +3,7 @@ import { MapPlotterComponent } from './map-plotter';
 import { TrainTrackerComponent } from './train-tracker';
 import { Component, computed, effect, signal } from '@angular/core';
 import {
-  CHARGES, SHELLS, calculateFireTime, elevationAt, firingSolution, selectCharge,
+  CHARGES, SHELLS, calculateFireTime, elevationAt, estimatedFlightSeconds, firingSolution, selectCharge,
   type ChargeMode, type FireTime
 } from './firing';
 
@@ -94,9 +94,22 @@ export class AppComponent {
   readonly chargeRows = computed(() => CHARGES.map(charge => ({
     charge, elevation: elevationAt(this.distanceKm(), charge), range: charge * 5
   })));
+  readonly estimatedFlight = computed<number | null>(() => {
+    const s = this.solution();
+    return s ? estimatedFlightSeconds(s.distanceKm, s.charge) : null;
+  });
+  readonly flightIsMeasured = computed(() => this.flightSeconds().trim() !== '');
+  readonly effectiveFlightSeconds = computed<number | null>(() => {
+    if (this.flightIsMeasured()) {
+      const value = Number(this.flightSeconds().trim().replace(',', '.'));
+      return Number.isFinite(value) && value >= 0 && value <= 3600 ? value : null;
+    }
+    return this.estimatedFlight();
+  });
   readonly fireTime = computed<FireTime | null>(() => {
-    if (!this.targetTime().trim() || !this.flightSeconds().trim()) return null;
-    return calculateFireTime(this.targetTime(), Number(this.flightSeconds().replace(',', '.')));
+    const flight = this.effectiveFlightSeconds();
+    if (!this.targetTime().trim() || flight === null) return null;
+    return calculateFireTime(this.targetTime(), flight);
   });
   readonly lowAngleNote = computed(() => {
     const solution = this.solution();
@@ -184,7 +197,10 @@ export class AppComponent {
       `Shell: ${this.shell()} | Bearing: ${s.bearing}°`,
       `Distance: ${s.distanceKm.toFixed(2)} km`,
       `Powder: ${s.charge} | Elevation: ${s.elevation.toFixed(2)}°`,
-      ...(this.fireTime() ? [`Fire at: ${this.fireTime()!.display}${this.fireTime()!.previousDay ? ' (previous day)' : ''}`] : [])
+      ...(this.effectiveFlightSeconds() !== null
+        ? [`Flight time: ${this.effectiveFlightSeconds()!.toFixed(2)} seconds (${this.flightIsMeasured() ? 'measured' : 'experimental estimate'})`]
+        : []),
+      ...(this.fireTime() ? [`Fire at: ${this.fireTime()!.display}${this.fireTime()!.previousDay ? ' (previous day)' : ''} (${this.flightIsMeasured() ? 'measured' : 'estimated flight time'})`] : [])
     ].join('\n');
   }
   openTrainSolution(solution: {bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void {
@@ -196,7 +212,7 @@ export class AppComponent {
     this.mode.set('manual');
     this.targetTime.set(solution.impactClock);
     this.flightSeconds.set(solution.flightSeconds);
-    this.advanced.set(solution.flightSeconds.trim()!=='');
+    this.advanced.set(true);
     this.tab.set('calculator');
     this.notice.set('Train impact point loaded. Timing requires measured projectile flight time.');
   }

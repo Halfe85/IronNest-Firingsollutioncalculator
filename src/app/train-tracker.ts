@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Output, computed, effect, signal } from '@angular/core';
 import { COLUMNS, ROWS, parseGrid, onMap } from './map-math';
-import { calculateFireTime, elevationAt, selectCharge } from './firing';
+import { calculateFireTime, elevationAt, estimatedFlightSeconds, selectCharge } from './firing';
 import {
   clockSeconds, trainPositionAt, validateSchedule, waypointSpeeds,
   type TrainSchedule, type TrainStop
@@ -61,14 +61,23 @@ export class TrainTrackerComponent {
     if(charge===null)return null;
     return {charge,elevation:elevationAt(answer.result.rangeKm,charge)!};
   });
+  readonly estimatedFlight = computed<number | null>(() => {
+    const calc=this.calculated();
+    const fire=this.firing();
+    return calc.ok && fire ? estimatedFlightSeconds(calc.result.rangeKm,fire.charge):null;
+  });
+  readonly flightIsMeasured = computed(()=>this.flightSeconds().trim()!=='');
+  readonly effectiveFlight = computed<number | null>(() => {
+    if(!this.flightIsMeasured())return this.estimatedFlight();
+    const manual=Number(this.flightSeconds().trim().replace(',','.'));
+    return Number.isFinite(manual)&&manual>=0&&manual<=3600?manual:null;
+  });
   readonly launchTime=computed(()=>{
-    const seconds=this.flightSeconds().trim().replace(',','.');
-    if(!seconds)return null;
-    const value=Number(seconds);
-    return calculateFireTime(this.selectedImpact(),value);
+    const flight=this.effectiveFlight();
+    return flight===null?null:calculateFireTime(this.selectedImpact(),flight);
   });
   readonly clockError=computed(()=>{
-    if(!this.flightSeconds().trim())return '';
+    if(!this.flightIsMeasured())return '';
     return this.launchTime()?'':'Flight time must be 0–3600 seconds, and impact time must be valid.';
   });
   readonly mapStops=computed(()=>this.stops().map(s=>{
