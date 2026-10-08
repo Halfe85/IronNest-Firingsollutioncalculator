@@ -150,3 +150,16 @@ For missions such as High Tide where a patrol/landing craft has a known speed bu
 Given at least one real game-clock timestamp and the route distances, the calculator fills **missing** waypoint times using `arrival - distance/speed`, with midnight wrap. Existing reported clock times are preserved, and if two known times contradict the chosen constant-speed model by more than 2 s, no values are changed. There is **no invented start/arrival clock**. High Tide provides a suggested speed of 36 km/h only as an editable, community-observed value, not a guaranteed value from every run.
 
 Each moving vehicle can be stored independently as a saved route. Its source reference point may be copied from a solved normal-plotting reference or entered manually.
+
+## Manual waypoint / coordinate-aware firing UI (October 2026)
+
+The two Tactical Plotter modes are now selected using one dropdown: **Observation** and **Waypoint**. No scenario templates, mission name, or automatically imported solved-reference dropdown are present. The Waypoint route builder starts with empty time, bearing and grid inputs; users explicitly enter their own mission data. Friendly spotters remain in Observation and can be used for bearings, ranges and reference-point chains, including missions with moving targets. Changing modes preserves each mode's locally saved observations/routes.
+
+**Calculate** requires the player to specify/confirm the Iron Nest position via letter / grid row / subcell X/Y selectors. It projects the specified bearing and distance to an approximate target grid on the 20×10 game map. A saved Fire Solution card displays that target grid, together with bearing, elevation, charges, shell and left/right cannon.
+
+Pressing **X** on a solution card opens a grid correction modal. Two distinct reports are supported:
+
+- **Target position**: the new grid is the real target location (e.g. it was farther away). Calculate the bearing and distance from the original Nest to that grid, retaining powder charge if within range, otherwise selecting minimum sufficient charges.
+- **Shell impact**: the new grid is where a previously aimed shell landed. Apply a first-order vector correction to the previous aiming coordinate, using `newAim = oldAim + intendedTarget - observedImpact`. This can correct both overshoot and lateral bearing error but has not yet been calibrated for dispersion.
+  
+The original intended target coordinates are preserved for repeated impact corrections; revisions are retained locally for audit (up to 30). Historical saved shots that lacked a Nest origin require the player to enter one before receiving a grid correction. A solution that would leave the map or valid game firing range is rejected instead of inventing coordinates.

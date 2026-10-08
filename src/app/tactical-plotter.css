@@ -77,3 +77,12 @@
 .map-preview-actions small{font-size:10px;color:#a2b3a0}
 .map-preview-actions button{min-height:38px;background:#3d422f;border:1px solid #a99467;border-radius:5px;color:#ffdfaa;font-size:11px;font-weight:850;padding:8px}
 @media(max-width:520px){.plot-mode-switch button{font-size:10px;letter-spacing:.1px}.report-heading{align-items:start;gap:5px;flex-wrap:wrap}.report-buttons button{font-size:10px}}
+
+.plot-mode-selector{max-width:960px;margin:0 auto 10px;background:#17241b;border:1px solid #3a513f;border-radius:8px;padding:9px}
+.plot-mode-selector label{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px}
+.plot-mode-selector label span{font-size:10px;letter-spacing:.8px;color:#b0c7b0;font-weight:850}
+.plot-mode-selector select{background:#24352a;border:1px solid #8c7955;color:#f2d9ac;border-radius:6px;padding:8px 10px;min-width:0;min-height:43px;font-size:15px;font-weight:800}
+.plot-quick-actions{display:flex;justify-content:flex-end;gap:9px}
+.plot-quick-actions button{border:1px solid #576c52;background:#27362a;color:#e0eacb;border-radius:5px;min-height:41px;padding:8px 12px;font-size:11px;font-weight:800}
+.plot-quick-actions .map-launch{border-color:#c29c5d;background:#55492c;color:#ffe2b5}
+@media(max-width:430px){.plot-mode-selector label{grid-template-columns:1fr;gap:5px}.plot-quick-actions button{flex:1}}

@@ -75,3 +75,7 @@
 .speed-assisted-waypoints label{margin:0}
 .speed-assisted-waypoints button{min-height:48px}
 @media(max-width:530px){.speed-assisted-waypoints{grid-template-columns:1fr}.speed-assisted-waypoints button{width:100%}}
+
+.route-presets{grid-template-columns:minmax(0,1fr) auto auto}
+@media(max-width:760px){.route-presets{grid-template-columns:minmax(0,1fr) auto auto}}
+@media(max-width:460px){.route-presets{grid-template-columns:1fr 1fr}.route-presets .train-field{grid-column:1/3}}

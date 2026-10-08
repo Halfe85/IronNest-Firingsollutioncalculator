@@ -1,17 +1,17 @@
 import {CommonModule} from '@angular/common';
 import {Component, EventEmitter, HostListener, Output, computed, effect, signal} from '@angular/core';
 import {formatGrid,compassCenter} from './map-math';
-import {TrainTrackerComponent,type RouteReference,type MovingFireRequest} from './train-tracker';
+import {TrainTrackerComponent,type MovingFireRequest} from './train-tracker';
 import {PlotMapComponent,type MapObservationMarker} from './plot-map';
 import {
-  GIBRALTAR_MISSION, gridInputLabel, solvePlotGraph, firingFromPlot,
+  gridInputLabel, solvePlotGraph, firingFromPlot,
   type GridInput, type IntelNode, type NodeRole
 } from './graph-math';
 import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 
-export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; shell:string; cannon:Cannon;}
+export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon;}
 const STORAGE='iron-nest-plot-graph-v1';
 function clone(src:readonly IntelNode[]):IntelNode[]{
   return src.map(n=>({...n,grid:n.grid?{...n.grid}:undefined,
@@ -27,8 +27,9 @@ function uid():string{
 })
 export class TacticalPlotterComponent{
   @Output() fireSolution=new EventEmitter<PlotFireRequest>();
-  readonly name=signal('Gibraltar • Heavy Cruiser');
-  readonly nodes=signal<IntelNode[]>(clone(GIBRALTAR_MISSION));
+  readonly nodes=signal<IntelNode[]>([{
+    id:'nest',name:'Iron Nest',role:'nest',grid:{letter:'A',column:1,x:0,y:0},reports:[]
+  }]);
   readonly modal=signal<'map'|'node'|null>(null);
   readonly activeId=signal<string|null>(null);
   readonly status=signal('');
@@ -60,9 +61,6 @@ export class TacticalPlotterComponent{
     return [];
   }));
   readonly formatGrid=formatGrid;
-  readonly resolvedReferences=computed<RouteReference[]>(()=>this.solution().results
-    .filter(r=>r.position&&r.node.role!=='nest')
-    .map(r=>({id:r.node.id,name:r.node.name,grid:formatGrid(r.position!)!})));
   readonly nestGridText=computed(()=>this.solution().get('nest')?.position
     ?formatGrid(this.solution().get('nest')!.position!):null);
   readonly activeObservations=computed<MapObservationMarker[]>(()=>{
@@ -88,8 +86,7 @@ export class TacticalPlotterComponent{
   constructor(){
     try{
       const data=JSON.parse(localStorage.getItem(STORAGE)??'null') as
-        {name?:unknown;nodes?:unknown;targetLoadouts?:unknown;plottingMode?:unknown}|null;
-      if(data&&typeof data.name==='string')this.name.set(data.name.slice(0,80));
+        {nodes?:unknown;targetLoadouts?:unknown;plottingMode?:unknown}|null;
       if(data&&data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
       if(data&&Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
         data.nodes.every((n:IntelNode)=>n&&typeof n.id==='string'&&
@@ -108,7 +105,7 @@ export class TacticalPlotterComponent{
       }
     }catch { /* missing or corrupted local data */ }
     effect(()=>{try{localStorage.setItem(STORAGE,
-      JSON.stringify({name:this.name(),nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),plottingMode:this.plottingMode()}));}catch{/* storage blocked */}});
+      JSON.stringify({nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),plottingMode:this.plottingMode()}));}catch{/* storage blocked */}});
   }
   @HostListener('document:keydown.escape')
   closeModal():void{
@@ -120,7 +117,7 @@ export class TacticalPlotterComponent{
   useMovingSolution(route:MovingFireRequest):void{
     this.fireSolution.emit({label:route.target,bearing:route.bearing,
       distanceKm:route.distanceKm,grid:route.grid??'',
-      shell:route.shell,cannon:route.cannon});
+      nestGrid:route.nestGrid,shell:route.shell,cannon:route.cannon});
   }
   setNestGrid(grid:GridInput):void{this.changeNode('nest',n=>({...n,grid}));}
   setActiveGrid(grid:GridInput):void{
@@ -130,25 +127,15 @@ export class TacticalPlotterComponent{
     this.nodes.update(nodes=>nodes.map(n=>n.id===id?update(n):n));
     this.status.set('');
   }
-  setName(value:string):void{this.name.set(value.slice(0,80));}
   renameNode(value:string):void{
     const id=this.activeId();if(id)this.changeNode(id,n=>({...n,name:value.slice(0,48)}));
   }
   newMission():void{
     if(!window.confirm('Start a new mission and replace the current locally saved plot?'))return;
-    this.name.set('New mission');
     this.targetLoadouts.set({});
     this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',
       grid:{letter:'A',column:1,x:0,y:0},reports:[]}]);
     this.status.set('Set Iron Nest grid, add spotters and then reference points or targets.');
-    this.closeModal();
-  }
-  loadExample():void{
-    if(!window.confirm('Load Gibraltar example and replace the current plot?'))return;
-    this.name.set('Gibraltar • Heavy Cruiser');
-    this.targetLoadouts.set({});
-    this.nodes.set(clone(GIBRALTAR_MISSION));
-    this.status.set('Gibraltar example loaded. Resolve references before the cruiser.');
     this.closeModal();
   }
   addNode(role:Exclude<NodeRole,'nest'>):void{
@@ -231,7 +218,7 @@ export class TacticalPlotterComponent{
     if(!point||!fire||!fire.grid)return;
     this.fireSolution.emit({
       label:point.node.name,bearing:fire.bearing,distanceKm:fire.rangeKm,grid:fire.grid,
-      shell:this.currentLoadout().shell,cannon:this.currentLoadout().cannon
+      nestGrid:this.nestGridText()??'',shell:this.currentLoadout().shell,cannon:this.currentLoadout().cannon
     });
     this.closeModal();
   }

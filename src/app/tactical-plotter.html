@@ -1,22 +1,17 @@
-<div class="plot-mode-switch" role="group" aria-label="Automatic plotter mode">
-  <button type="button" [class.selected]="plottingMode()==='normal'" [attr.aria-pressed]="plottingMode()==='normal'"
-    (click)="setMode('normal')">NORMAL PLOTTING</button>
-  <button type="button" [class.selected]="plottingMode()==='waypoint'" [attr.aria-pressed]="plottingMode()==='waypoint'"
-    (click)="setMode('waypoint')">WAYPOINT TARGETING</button>
+<div class="plot-mode-selector">
+  <label><span>AUTO PLOTTER MODE</span>
+    <select [value]="plottingMode()" (change)="setMode($any($event.target).value)">
+      <option value="normal">Observation</option>
+      <option value="waypoint">Waypoint</option>
+    </select>
+  </label>
 </div>
-
 @if(plottingMode()==='normal'){
-<div class="plot-surface">
-  <div class="plot-control">
-    <label class="mission-heading"><span>MISSION</span>
-      <input type="text" maxlength="80" [value]="name()" (input)="setName($any($event.target).value)" aria-label="Mission name">
-    </label>
-    <div class="plot-actions">
-      <button type="button" (click)="newMission()">New</button>
-      <button type="button" (click)="loadExample()">Example</button>
-      <button class="map-launch" type="button" (click)="openMap()">Map ↗</button>
+  <div class="plot-surface">
+    <div class="plot-quick-actions">
+      <button type="button" (click)="newMission()">NEW / CLEAR</button>
+      <button type="button" class="map-launch" (click)="openMap()">MAP ↗</button>
     </div>
-  </div>
   <div class="plot-nest">
     <div class="section-label">IRON NEST <span>{{ nest() ? gridLabel(nest()!) : '—' }}</span></div>
     @if(nest();as n){@if(n.grid){<app-grid-select [value]="n.grid" (valueChange)="setNestGrid($event)"></app-grid-select>}}
@@ -63,7 +58,7 @@
   @if(status()){<p class="plot-status" role="status">{{status()}}</p>}
 </div>
 } @else {
-  <app-train-tracker [availableReferences]="resolvedReferences()" [currentNestGrid]="nestGridText()"
+  <app-train-tracker [currentNestGrid]="nestGridText()"
     (useSolution)="useMovingSolution($event)"></app-train-tracker>
 }
 

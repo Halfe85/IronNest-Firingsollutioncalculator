@@ -12,21 +12,18 @@ import {
 
 const STORAGE_KEY='iron-nest-train-v2';
 const LEGACY_KEY='iron-nest-train-v1';
-export interface RouteReference { id:string;name:string;grid:string; }
 export interface MovingFireRequest {
   bearing:number;distanceKm:number;target:string;impactClock:string;
-  flightSeconds:string;grid:string|null;shell:string;cannon:Cannon;
+  flightSeconds:string;grid:string|null;nestGrid:string;shell:string;cannon:Cannon;
 }
 interface SavedRoute {
   id:string;name:string;nestGrid:string;stationGrid:string;
   railBearing:string;approachSide:'bearing'|'opposite';
   stops:TrainStop[];targetLabel:string;shell:string;cannon:Cannon;routeSpeed?:string;
 }
-const DEFAULT_STOPS:TrainStop[]=[
-  {name:'Waypoint A',kmFromStation:6,time:'10:06:50'},
-  {name:'Waypoint B',kmFromStation:4,time:'10:10:10'},
-  {name:'Waypoint C',kmFromStation:2,time:'10:13:30'},
-  {name:'MainStation',kmFromStation:0,time:'10:16:50'}
+const EMPTY_STOPS:TrainStop[]=[
+  {name:'Waypoint A',kmFromStation:5,time:''},
+  {name:'Arrival',kmFromStation:0,time:''}
 ];
 const MAP_LEFT=54,MAP_TOP=37,CELL=46;
 
@@ -38,30 +35,26 @@ const MAP_LEFT=54,MAP_TOP=37,CELL=46;
   styleUrl:'./train-tracker.css'
 })
 export class TrainTrackerComponent {
-  @Input() availableReferences:readonly RouteReference[]=[];
   @Input() currentNestGrid:string|null=null;
   @Output() useSolution=new EventEmitter<MovingFireRequest>();
   readonly columns=COLUMNS;
   readonly rows=ROWS;
-  readonly nestGrid=signal('C2 5:6');
-  readonly stationGrid=signal('J6 0:4');
-  readonly railBearing=signal('90');
+  readonly nestGrid=signal('');
+  readonly stationGrid=signal('');
+  readonly railBearing=signal('');
   readonly approachSide=signal<'bearing'|'opposite'>('bearing');
-  readonly stops=signal<TrainStop[]>(DEFAULT_STOPS.map(s=>({...s})));
-  readonly impactMode=signal('1');
-  readonly customImpactClock=signal('10:11:50');
+  readonly stops=signal<TrainStop[]>(EMPTY_STOPS.map(s=>({...s})));
+  readonly impactMode=signal('custom');
+  readonly customImpactClock=signal('');
   readonly flightSeconds=signal('');
-  readonly targetLabel=signal('Enemy troop train');
-  readonly routeName=signal('Valle de Mula');
-  readonly routeSpeed=signal('36');
-  readonly routeTemplate=signal<'rail'|'landing'|'custom'>('rail');
-  readonly selectedSource=signal('');
+  readonly targetLabel=signal('Moving target');
+  readonly routeName=signal('Route');
+  readonly routeSpeed=signal('');
   readonly routeMapOpen=signal(false);
   readonly shellOptions=SHELLS;
   readonly shell=signal('HCHE');
   readonly cannon=signal<Cannon>('left');
   readonly savedRoutes=signal<SavedRoute[]>([]);
-  readonly referenceLabel=computed(()=>this.availableReferences.find(r=>r.id===this.selectedSource())?.name??'Custom map reference');
   readonly notice=signal('');
   readonly config=computed<TrainSchedule>(()=>({
     nestGrid:this.nestGrid(),
@@ -126,7 +119,6 @@ export class TrainTrackerComponent {
         stops:this.stops(),impactMode:this.impactMode(),
         customImpactClock:this.customImpactClock(),flightSeconds:this.flightSeconds(),
         targetLabel:this.targetLabel(),routeName:this.routeName(),routeSpeed:this.routeSpeed(),
-        routeTemplate:this.routeTemplate(),selectedSource:this.selectedSource(),
         shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes()
       }));}catch{ /* storage disabled */ }
     });
@@ -137,8 +129,8 @@ export class TrainTrackerComponent {
         Partial<{nestGrid:string;stationGrid:string;railBearing:string;
           approachSide:'bearing'|'opposite';stops:TrainStop[];
           impactMode:string;customImpactClock:string;flightSeconds:string;
-          targetLabel:string;routeName:string;routeSpeed:string;routeTemplate:'rail'|'landing'|'custom';
-          selectedSource:string;shell:string;cannon:Cannon;savedRoutes:SavedRoute[];}>|null;
+          targetLabel:string;routeName:string;routeSpeed:string;
+          shell:string;cannon:Cannon;savedRoutes:SavedRoute[];}>|null;
       if(!state)return;
       if(typeof state.nestGrid==='string')this.nestGrid.set(state.nestGrid);
       if(typeof state.stationGrid==='string')this.stationGrid.set(state.stationGrid);
@@ -155,9 +147,6 @@ export class TrainTrackerComponent {
       if(typeof state.targetLabel==='string')this.targetLabel.set(state.targetLabel.slice(0,50));
       if(typeof state.routeName==='string')this.routeName.set(state.routeName.slice(0,60));
       if(typeof state.routeSpeed==='string')this.routeSpeed.set(state.routeSpeed);
-      if(['rail','landing','custom'].includes(state.routeTemplate??''))
-        this.routeTemplate.set(state.routeTemplate!);
-      if(typeof state.selectedSource==='string')this.selectedSource.set(state.selectedSource);
       if(typeof state.shell==='string')this.shell.set(normalizeShell(state.shell));
       if(state.cannon==='left'||state.cannon==='right')this.cannon.set(state.cannon);
       if(Array.isArray(state.savedRoutes))this.savedRoutes.set(state.savedRoutes.filter(r=>
@@ -179,34 +168,8 @@ export class TrainTrackerComponent {
   setStopName(index:number,value:string):void{
     this.stops.update(items=>items.map((s,i)=>i===index?{...s,name:value.slice(0,30)}:s));
   }
-  resetExample():void{
-    this.nestGrid.set('C2 5:6');
-    this.stationGrid.set('J6 0:4');
-    this.railBearing.set('90');
-    this.approachSide.set('bearing');
-    this.stops.set(DEFAULT_STOPS.map(s=>({...s})));
-    this.impactMode.set('1');
-    this.customImpactClock.set('10:11:50');
-    this.flightSeconds.set('');
-    this.targetLabel.set('Enemy troop train');
-    this.routeName.set('Valle de Mula');
-    this.routeSpeed.set('36');
-    this.routeTemplate.set('rail');
-    this.shell.set('HCHE');
-    this.cannon.set('left');
-    this.selectedSource.set('');
-    this.notice.set('Valle de Mula train mission restored.');
-  }
   setShell(value:string):void{if(SHELLS.some(s=>s===value))this.shell.set(value);}
   setCannon(value:string):void{const c=cannonOrUnassigned(value);if(c)this.cannon.set(c);}
-  importReference(id:string):void{
-    this.selectedSource.set(id);
-    const from=this.availableReferences.find(r=>r.id===id);
-    if(!from)return;
-    this.stationGrid.set(from.grid);
-    if(this.currentNestGrid)this.nestGrid.set(this.currentNestGrid);
-    this.notice.set('Reference '+from.name+' copied from Normal Plotting.');
-  }
   useCurrentNest():void{
     if(!this.currentNestGrid)return;
     this.nestGrid.set(this.currentNestGrid);
@@ -215,35 +178,15 @@ export class TrainTrackerComponent {
   openRouteMap():void{this.routeMapOpen.set(true);}
   closeRouteMap():void{this.routeMapOpen.set(false);}
   newRoute():void{
-    this.routeName.set('New route');this.routeSpeed.set('');this.routeTemplate.set('custom');
+    this.routeName.set('New route');this.routeSpeed.set('');
     this.stationGrid.set('');this.railBearing.set('0');this.approachSide.set('bearing');
     this.stops.set([{name:'Waypoint A',kmFromStation:5,time:''},
       {name:'Arrival reference',kmFromStation:0,time:''}]);
-    this.targetLabel.set('Moving target');this.selectedSource.set('');
+    this.targetLabel.set('Moving target');
     this.impactMode.set('custom');this.customImpactClock.set('');
     this.flightSeconds.set('');
     if(this.currentNestGrid)this.nestGrid.set(this.currentNestGrid);
     this.notice.set('Create waypoints with distances and game times.');
-  }
-  loadLandingTemplate():void{
-    this.newRoute();
-    this.routeName.set('High Tide • landing craft');
-    this.routeTemplate.set('landing');
-    this.routeSpeed.set('36');
-    this.railBearing.set('0');
-    this.stops.set([
-      {name:'5 km from landing',kmFromStation:5,time:''},
-      {name:'3 km from landing',kmFromStation:3,time:''},
-      {name:'1 km from landing',kmFromStation:1,time:''},
-      {name:'Landing',kmFromStation:0,time:''}
-    ]);
-    this.targetLabel.set('Landing craft');
-    this.notice.set('High Tide: 36 km/h player-reported speed, southbound travel. Fill in the actual coordinates and clock times for this craft. Bearing FROM the landing reference to the approach line is 000°.');
-  }
-  selectTemplate(value:string):void{
-    if(value==='rail')this.resetExample();
-    else if(value==='landing')this.loadLandingTemplate();
-    else this.newRoute();
   }
   saveRoute():void{
     const id=typeof crypto!=='undefined'&&'randomUUID' in crypto?
@@ -253,7 +196,7 @@ export class TrainTrackerComponent {
       nestGrid:this.nestGrid(),stationGrid:this.stationGrid(),
       railBearing:this.railBearing(),approachSide:this.approachSide(),
       stops:this.stops().map(s=>({...s})),targetLabel:this.targetLabel(),
-      shell:this.shell(),cannon:this.cannon()
+      shell:this.shell(),cannon:this.cannon(),routeSpeed:this.routeSpeed()
     };
     this.savedRoutes.update(items=>[route,...items].slice(0,25));
     this.notice.set('Saved route on this device.');
@@ -266,7 +209,7 @@ export class TrainTrackerComponent {
     this.targetLabel.set(r.targetLabel);this.shell.set(normalizeShell(r.shell));
     this.cannon.set(cannonOrUnassigned(r.cannon)??'left');
     this.routeSpeed.set(r.routeSpeed??'');
-    this.impactMode.set('custom');this.selectedSource.set('');
+    this.impactMode.set('custom');
     this.notice.set('Route restored: '+r.name);
   }
   deleteRoute(id:string):void{this.savedRoutes.update(items=>items.filter(v=>v.id!==id));}
@@ -310,7 +253,7 @@ export class TrainTrackerComponent {
       target:this.targetLabel().trim()||'Train interception',
       impactClock:this.selectedImpact(),
       flightSeconds:this.flightSeconds().trim(),
-      grid:calc.result.grid,shell:this.shell(),cannon:this.cannon()
+      grid:calc.result.grid,nestGrid:this.nestGrid(),shell:this.shell(),cannon:this.cannon()
     });
   }
 }
