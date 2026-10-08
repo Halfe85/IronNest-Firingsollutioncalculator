@@ -127,7 +127,7 @@ export class TrainTrackerComponent {
         customImpactClock:this.customImpactClock(),flightSeconds:this.flightSeconds(),
         targetLabel:this.targetLabel(),routeName:this.routeName(),routeSpeed:this.routeSpeed(),
         routeTemplate:this.routeTemplate(),selectedSource:this.selectedSource(),
-        shell:this.shell(),cannon:this.cannon(),routeSpeed:this.routeSpeed(),savedRoutes:this.savedRoutes()
+        shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes()
       }));}catch{ /* storage disabled */ }
     });
   }
