@@ -51,6 +51,13 @@
     </div>
     <p class="train-note">Distances are measured from the reference/arrival point backward along the route. Set the side correctly: a 090° line alone does not specify movement direction. Use the map button to inspect calculated waypoint markers.</p>
 
+    <div class="speed-assisted-waypoints">
+      <label class="train-field"><span>OPTIONAL CONSTANT SPEED · KM/H</span>
+        <input type="text" inputmode="decimal" [value]="routeSpeed()" (input)="routeSpeed.set($any($event.target).value)" placeholder="e.g. 36">
+      </label>
+      <button type="button" class="train-reset" (click)="calculateWaypointTimes()">CALCULATE MISSING TIMES</button>
+    </div>
+    <p class="train-note">Enter at least one actual game-clock report, usually the arrival ETA. If the speed is known, missing waypoint times can be calculated without inventing a starting time. Existing reported times are never overwritten.</p>
     <div class="train-stops-heading">
       <div><span class="train-kicker">WAYPOINTS // GAME TIMETABLE</span><h3>Reported waypoints</h3></div>
       <button type="button" class="train-reset" (click)="addWaypoint()">+ WAYPOINT</button>

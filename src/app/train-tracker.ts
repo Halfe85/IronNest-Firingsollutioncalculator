@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, effect, signal } from '@angular/core';
 import { COLUMNS, ROWS, parseGrid } from './map-math';
 import {SHELLS} from './firing';
+import {fillWaypointTimes} from './route-timing';
 import {type Cannon,cannonOrUnassigned,normalizeShell} from './shot-options';
 import { calculateFireTime, elevationAt, estimatedFlightSeconds, selectCharge } from './firing';
 import {
@@ -19,7 +20,7 @@ export interface MovingFireRequest {
 interface SavedRoute {
   id:string;name:string;nestGrid:string;stationGrid:string;
   railBearing:string;approachSide:'bearing'|'opposite';
-  stops:TrainStop[];targetLabel:string;shell:string;cannon:Cannon;
+  stops:TrainStop[];targetLabel:string;shell:string;cannon:Cannon;routeSpeed?:string;
 }
 const DEFAULT_STOPS:TrainStop[]=[
   {name:'Waypoint A',kmFromStation:6,time:'10:06:50'},
@@ -52,6 +53,7 @@ export class TrainTrackerComponent {
   readonly flightSeconds=signal('');
   readonly targetLabel=signal('Enemy troop train');
   readonly routeName=signal('Valle de Mula');
+  readonly routeSpeed=signal('36');
   readonly routeTemplate=signal<'rail'|'landing'|'custom'>('rail');
   readonly selectedSource=signal('');
   readonly routeMapOpen=signal(false);
@@ -123,9 +125,9 @@ export class TrainTrackerComponent {
         railBearing:this.railBearing(),approachSide:this.approachSide(),
         stops:this.stops(),impactMode:this.impactMode(),
         customImpactClock:this.customImpactClock(),flightSeconds:this.flightSeconds(),
-        targetLabel:this.targetLabel(),routeName:this.routeName(),
+        targetLabel:this.targetLabel(),routeName:this.routeName(),routeSpeed:this.routeSpeed(),
         routeTemplate:this.routeTemplate(),selectedSource:this.selectedSource(),
-        shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes()
+        shell:this.shell(),cannon:this.cannon(),routeSpeed:this.routeSpeed(),savedRoutes:this.savedRoutes()
       }));}catch{ /* storage disabled */ }
     });
   }
@@ -135,7 +137,7 @@ export class TrainTrackerComponent {
         Partial<{nestGrid:string;stationGrid:string;railBearing:string;
           approachSide:'bearing'|'opposite';stops:TrainStop[];
           impactMode:string;customImpactClock:string;flightSeconds:string;
-          targetLabel:string;routeName:string;routeTemplate:'rail'|'landing'|'custom';
+          targetLabel:string;routeName:string;routeSpeed:string;routeTemplate:'rail'|'landing'|'custom';
           selectedSource:string;shell:string;cannon:Cannon;savedRoutes:SavedRoute[];}>|null;
       if(!state)return;
       if(typeof state.nestGrid==='string')this.nestGrid.set(state.nestGrid);
@@ -152,6 +154,7 @@ export class TrainTrackerComponent {
       if(typeof state.flightSeconds==='string')this.flightSeconds.set(state.flightSeconds);
       if(typeof state.targetLabel==='string')this.targetLabel.set(state.targetLabel.slice(0,50));
       if(typeof state.routeName==='string')this.routeName.set(state.routeName.slice(0,60));
+      if(typeof state.routeSpeed==='string')this.routeSpeed.set(state.routeSpeed);
       if(['rail','landing','custom'].includes(state.routeTemplate??''))
         this.routeTemplate.set(state.routeTemplate!);
       if(typeof state.selectedSource==='string')this.selectedSource.set(state.selectedSource);
@@ -187,6 +190,7 @@ export class TrainTrackerComponent {
     this.flightSeconds.set('');
     this.targetLabel.set('Enemy troop train');
     this.routeName.set('Valle de Mula');
+    this.routeSpeed.set('36');
     this.routeTemplate.set('rail');
     this.shell.set('HCHE');
     this.cannon.set('left');
@@ -211,7 +215,7 @@ export class TrainTrackerComponent {
   openRouteMap():void{this.routeMapOpen.set(true);}
   closeRouteMap():void{this.routeMapOpen.set(false);}
   newRoute():void{
-    this.routeName.set('New route');this.routeTemplate.set('custom');
+    this.routeName.set('New route');this.routeSpeed.set('');this.routeTemplate.set('custom');
     this.stationGrid.set('');this.railBearing.set('0');this.approachSide.set('bearing');
     this.stops.set([{name:'Waypoint A',kmFromStation:5,time:''},
       {name:'Arrival reference',kmFromStation:0,time:''}]);
@@ -225,6 +229,7 @@ export class TrainTrackerComponent {
     this.newRoute();
     this.routeName.set('High Tide • landing craft');
     this.routeTemplate.set('landing');
+    this.routeSpeed.set('36');
     this.railBearing.set('0');
     this.stops.set([
       {name:'5 km from landing',kmFromStation:5,time:''},
@@ -260,10 +265,19 @@ export class TrainTrackerComponent {
     this.approachSide.set(r.approachSide);this.stops.set(r.stops.map(s=>({...s})));
     this.targetLabel.set(r.targetLabel);this.shell.set(normalizeShell(r.shell));
     this.cannon.set(cannonOrUnassigned(r.cannon)??'left');
+    this.routeSpeed.set(r.routeSpeed??'');
     this.impactMode.set('custom');this.selectedSource.set('');
     this.notice.set('Route restored: '+r.name);
   }
   deleteRoute(id:string):void{this.savedRoutes.update(items=>items.filter(v=>v.id!==id));}
+  calculateWaypointTimes():void {
+    const speed=Number(this.routeSpeed().trim().replace(',','.'));
+    const plan=fillWaypointTimes(this.stops(),speed);
+    if(plan.error){this.notice.set(plan.error);return;}
+    this.stops.set(plan.stops);
+    this.impactMode.set(String(this.stops().length-1));
+    this.notice.set('Missing waypoint clocks filled from the reported game time and constant speed.');
+  }
   addWaypoint():void{
     const s=this.stops();
     if(s.length>=12){this.notice.set('Maximum 11 approach waypoints and one station.');return;}

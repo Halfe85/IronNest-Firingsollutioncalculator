@@ -1,6 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {Component, EventEmitter, HostListener, Output, computed, effect, signal} from '@angular/core';
-import {formatGrid} from './map-math';
+import {formatGrid,compassCenter} from './map-math';
+import {TrainTrackerComponent,type RouteReference,type MovingFireRequest} from './train-tracker';
+import {PlotMapComponent,type MapObservationMarker} from './plot-map';
 import {
   GIBRALTAR_MISSION, gridInputLabel, solvePlotGraph, firingFromPlot,
   type GridInput, type IntelNode, type NodeRole
@@ -20,7 +22,7 @@ function uid():string{
     Date.now().toString(36)+Math.random().toString(36).slice(2);
 }
 @Component({
-  selector:'app-tactical-plotter',standalone:true,imports:[CommonModule,GridSelectComponent],
+  selector:'app-tactical-plotter',standalone:true,imports:[CommonModule,GridSelectComponent,TrainTrackerComponent,PlotMapComponent],
   templateUrl:'./tactical-plotter.html',styleUrl:'./tactical-plotter.css'
 })
 export class TacticalPlotterComponent{
@@ -30,6 +32,8 @@ export class TacticalPlotterComponent{
   readonly modal=signal<'map'|'node'|null>(null);
   readonly activeId=signal<string|null>(null);
   readonly status=signal('');
+  readonly plottingMode=signal<'normal'|'waypoint'>('normal');
+  readonly observationMapVisible=signal(false);
   readonly shellOptions=SHELLS;
   readonly targetLoadouts=signal<Record<string,{shell:string;cannon:Cannon}>>({});
   readonly currentLoadout=computed(()=>{
@@ -56,13 +60,37 @@ export class TacticalPlotterComponent{
     return [];
   }));
   readonly formatGrid=formatGrid;
-  readonly mapColumns='ABCDEFGHIJKLMNOPQRST'.split('');
-  readonly mapRows=Array.from({length:10},(_,i)=>10-i);
+  readonly resolvedReferences=computed<RouteReference[]>(()=>this.solution().results
+    .filter(r=>r.position&&r.node.role!=='nest')
+    .map(r=>({id:r.node.id,name:r.node.name,grid:formatGrid(r.position!)!})));
+  readonly nestGridText=computed(()=>this.solution().get('nest')?.position
+    ?formatGrid(this.solution().get('nest')!.position!):null);
+  readonly activeObservations=computed<MapObservationMarker[]>(()=>{
+    const node=this.active();
+    if(!node)return [];
+    return node.reports.flatMap(report=>{
+      const origin=this.solution().get(report.sourceId)?.position;
+      if(!origin)return [];
+      let value:number;
+      if(report.type==='sector'){
+        const bearing=compassCenter(report.value);
+        if(bearing===null)return [];
+        value=bearing;
+      }else{
+        if(!report.value.trim())return [];
+        value=Number(report.value.replace(',','.'));
+        if(!Number.isFinite(value)||report.type==='bearing'&&(value<0||value>360)||
+          report.type==='range'&&value<=0)return [];
+      }
+      return [{id:report.id,source:origin,type:report.type,value}];
+    });
+  });
   constructor(){
     try{
       const data=JSON.parse(localStorage.getItem(STORAGE)??'null') as
-        {name?:unknown;nodes?:unknown;targetLoadouts?:unknown}|null;
+        {name?:unknown;nodes?:unknown;targetLoadouts?:unknown;plottingMode?:unknown}|null;
       if(data&&typeof data.name==='string')this.name.set(data.name.slice(0,80));
+      if(data&&data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
       if(data&&Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
         data.nodes.every((n:IntelNode)=>n&&typeof n.id==='string'&&
         typeof n.name==='string'&&['nest','spotter','reference','target'].includes(n.role)&&
@@ -80,10 +108,20 @@ export class TacticalPlotterComponent{
       }
     }catch { /* missing or corrupted local data */ }
     effect(()=>{try{localStorage.setItem(STORAGE,
-      JSON.stringify({name:this.name(),nodes:this.nodes(),targetLoadouts:this.targetLoadouts()}));}catch{/* storage blocked */}});
+      JSON.stringify({name:this.name(),nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),plottingMode:this.plottingMode()}));}catch{/* storage blocked */}});
   }
   @HostListener('document:keydown.escape')
-  closeModal():void{this.modal.set(null);this.activeId.set(null);}
+  closeModal():void{
+    this.modal.set(null);this.activeId.set(null);this.observationMapVisible.set(false);
+  }
+  setMode(mode:'normal'|'waypoint'):void{this.plottingMode.set(mode);this.closeModal();}
+  showMapFromObservations():void{this.modal.set('map');}
+  backFromMap():void{if(this.activeId())this.modal.set('node');else this.closeModal();}
+  useMovingSolution(route:MovingFireRequest):void{
+    this.fireSolution.emit({label:route.target,bearing:route.bearing,
+      distanceKm:route.distanceKm,grid:route.grid??'',
+      shell:route.shell,cannon:route.cannon});
+  }
   setNestGrid(grid:GridInput):void{this.changeNode('nest',n=>({...n,grid}));}
   setActiveGrid(grid:GridInput):void{
     const id=this.activeId();if(id)this.changeNode(id,n=>({...n,grid}));
@@ -146,7 +184,7 @@ export class TacticalPlotterComponent{
     this.nodes.update(nodes=>nodes.filter(n=>n.id!==id));
     this.closeModal();
   }
-  openNode(id:string):void{this.activeId.set(id);this.modal.set('node');}
+  openNode(id:string):void{this.activeId.set(id);this.observationMapVisible.set(false);this.modal.set('node');}
   openMap():void{this.modal.set('map');this.activeId.set(null);}
   addReport():void{
     const active=this.active();

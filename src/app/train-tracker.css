@@ -70,3 +70,8 @@
 .route-map-dialog .train-map-scroll{max-height:calc(100dvh - 160px)}
 @media(max-width:760px){.route-presets{grid-template-columns:1fr 1fr}.route-presets button{width:100%}}
 @media(max-width:420px){.route-presets{grid-template-columns:1fr 1fr}.route-map-dialog{padding:8px}.route-map-title{font-size:10px}}
+
+.speed-assisted-waypoints{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;border:1px solid #536748;background:#1a2c20;border-radius:7px;padding:10px;margin:14px 0 8px}
+.speed-assisted-waypoints label{margin:0}
+.speed-assisted-waypoints button{min-height:48px}
+@media(max-width:530px){.speed-assisted-waypoints{grid-template-columns:1fr}.speed-assisted-waypoints button{width:100%}}

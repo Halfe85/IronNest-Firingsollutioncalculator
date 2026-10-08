@@ -142,3 +142,11 @@ Route templates: **Iron Road / Valle de Mula** uses current screenshot Iron Nest
 Other relevant operation classes found in the player community: High Tide (several moving landing craft at about 36 km/h southward per player accounts), Final Harvest (moving train plus static targets), Rock of Gibraltar (optional moving cruiser), and Phantom Battery (mobile artillery, but no verified timed route). These support a generic route module without assuming all moving missions are trains.
 
 Caveat: this version handles **straight-line routes with timed distances from a reference**; branched roads, curved paths, multiple legs with individual bearings, target acceleration, and automatically propagating observation uncertainty are not yet modeled. The map axis orientation remains provisional.
+
+### Speed-based waypoint clock generation
+
+For missions such as High Tide where a patrol/landing craft has a known speed but the order names only an arrival ETA, the Waypoint Targeting mode offers **Optional constant speed (km/h)** and **Calculate missing times**.
+
+Given at least one real game-clock timestamp and the route distances, the calculator fills **missing** waypoint times using `arrival - distance/speed`, with midnight wrap. Existing reported clock times are preserved, and if two known times contradict the chosen constant-speed model by more than 2 s, no values are changed. There is **no invented start/arrival clock**. High Tide provides a suggested speed of 36 km/h only as an editable, community-observed value, not a guaranteed value from every run.
+
+Each moving vehicle can be stored independently as a saved route. Its source reference point may be copied from a solved normal-plotting reference or entered manually.
