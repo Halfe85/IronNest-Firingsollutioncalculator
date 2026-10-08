@@ -1,0 +1,8 @@
+.map-viewport{overflow:auto;max-width:100%;border:1px solid #52624f;border-radius:7px;background:#101a14;scrollbar-width:thin}
+.plot-svg{display:block;width:100%;min-width:800px;height:auto}
+.map-line{stroke:#52604d;stroke-width:.8}
+.map-text{fill:#c6d2b2;font-size:12px;font-weight:850}
+.map-marker-text{paint-order:stroke;stroke:#102016;stroke-width:3px;fill:#ffdbaf;font-size:11px;font-weight:900}
+.observation-circle{fill:#85aedb;fill-opacity:.045;stroke:#8cbddd;stroke-width:2;stroke-dasharray:6 4}
+.observation-line{stroke:#f4c17b;stroke-width:2;stroke-dasharray:7 4}
+.observation-sector{fill:#f4bf7b;fill-opacity:.10;stroke:#c59c63;stroke-width:1}

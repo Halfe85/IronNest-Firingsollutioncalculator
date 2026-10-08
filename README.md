@@ -127,3 +127,18 @@ Every saved Fire Solution tile displays **bearing, elevation, charges, shell typ
 The **Calculate** tab has both shell type and cannon selection. In **Tactical Plotter**, each target modal independently stores a shell type and cannon selection. The **Fire solution** button passes those selections to the saved shot, rather than falling back to the Calculate tab's previous shell. The corrected shot's shell and cannon carry over when retrying.
 
 Historical shot records with no recorded cannon remain **UNASSIGNED** until a user explicitly selects Left or Right; the app never fabricates an earlier cannon assignment.
+
+## October 2026: two modes inside Tactical Plotter
+
+The top-level **Train** tab has been consolidated into **Tactical Plotter**, with two mode buttons:
+
+- **Normal Plotting** — triangulate targets and intermediate reference points, manually resolve ambiguous intersections, and reuse solved points as observations.
+- **Waypoint Targeting** — an editable moving-target **route builder** with a named reference/arrival point, direction, linear waypoints, game-clock timestamps, optional observed flight time and predicted intercept position. Solved points from Normal Plotting can be imported as route references; Iron Nest grid can be synced too.
+
+When editing observations in a Normal Plotting reference/target dialog, **SHOW MAP MARKERS** expands a live embedded map showing all solved positions, current bearing rays, distance circles and possible locations. **FULL MAP** expands it into a modal and returns to point details when closed.
+
+Route templates: **Iron Road / Valle de Mula** uses current screenshot Iron Nest `C2 5:6`, MainStation `J6 0:4`, and user-supplied 6/4/2/0 km waypoint times. **High Tide** is an unfilled template requiring the current run's coordinates and times; no example landing point or ETA is invented. The user can save multiple routes locally (one train or landing craft per route).
+
+Other relevant operation classes found in the player community: High Tide (several moving landing craft at about 36 km/h southward per player accounts), Final Harvest (moving train plus static targets), Rock of Gibraltar (optional moving cruiser), and Phantom Battery (mobile artillery, but no verified timed route). These support a generic route module without assuming all moving missions are trains.
+
+Caveat: this version handles **straight-line routes with timed distances from a reference**; branched roads, curved paths, multiple legs with individual bearings, target acceleration, and automatically propagating observation uncertainty are not yet modeled. The map axis orientation remains provisional.

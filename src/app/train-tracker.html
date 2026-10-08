@@ -1,22 +1,153 @@
-<main class="train-layout">
+<div class="train-layout">
   <section class="train-workspace">
     <div class="train-heading">
-      <div><span class="train-kicker">01 // TIME-TARGETED OPERATIONS</span>
-        <h2>Train interception tracker</h2>
-        <p>Use the in-game timetable to predict the moving target's position at impact.</p>
+      <div><span class="train-kicker">ROUTE BUILDER // MOVING TARGETS</span>
+        <h2>{{routeName()}}</h2>
+        <p>Define a reference point and timed waypoints; predict the moving target's location at impact.</p>
       </div>
-      <button class="train-reset" type="button" (click)="resetExample()">RESET EXAMPLE</button>
+      <button class="train-reset" type="button" (click)="openRouteMap()">MAP ↗</button>
     </div>
-    <div class="train-tip">Sample: Valle de Mula, the inbound five-car troop train. Every coordinate and time is editable for a different playthrough.</div>
+    <div class="route-presets">
+      <label class="train-field"><span>ROUTE TEMPLATE</span><select [value]="routeTemplate()" (change)="selectTemplate($any($event.target).value)">
+        <option value="rail">Iron Road · Train</option>
+        <option value="landing">High Tide · Landing craft</option>
+        <option value="custom">Custom route</option>
+      </select></label>
+      <label class="train-field"><span>ROUTE NAME</span>
+        <input type="text" maxlength="60" [value]="routeName()" (input)="routeName.set($any($event.target).value)">
+      </label>
+      <button type="button" class="train-reset" (click)="newRoute()">+ NEW</button>
+      <button type="button" class="train-reset" (click)="saveRoute()">SAVE ROUTE</button>
+    </div>
+    @if(savedRoutes().length){
+      <label class="train-field"><span>SAVED ROUTES · SEPARATE TRAINS / CRAFT</span>
+        <select (change)="restoreRoute($any($event.target).value);$any($event.target).value=''">
+          <option value="">Load saved route...</option>
+          @for(saved of savedRoutes();track saved.id){<option [value]="saved.id">{{saved.name}}</option>}
+        </select>
+      </label>
+    }
+    @if(availableReferences.length){
+      <label class="train-field"><span>USE RESOLVED NORMAL-PLOT REFERENCE</span>
+        <select [value]="selectedSource()" (change)="importReference($any($event.target).value)">
+          <option value="">Enter reference manually...</option>
+          @for(reference of availableReferences;track reference.id){
+            <option [value]="reference.id">{{reference.name}} · {{reference.grid}}</option>
+          }
+        </select>
+      </label>
+    }
+    <div class="route-nest-sync">
+      <span>Coordinates below can be entered manually or copied from Normal Plotting.</span>
+      @if(currentNestGrid){<button type="button" class="train-reset" (click)="useCurrentNest()">SYNC NEST</button>}
+    </div>
     <div class="location-grid">
-      <label><span>IRON NEST POSITION</span><input type="text" [value]="nestGrid()" (input)="nestGrid.set($any($event.target).value)" placeholder="C3 1:8"></label>
-      <label><span>MAIN STATION GRID</span><input type="text" [value]="stationGrid()" (input)="stationGrid.set($any($event.target).value)" placeholder="J6 0:4"></label>
-      <label><span>RAIL LINE BEARING FROM STATION</span><input type="text" inputmode="decimal" [value]="railBearing()" (input)="railBearing.set($any($event.target).value)" placeholder="90"></label>
-      <label><span>APPROACH SIDE OF STATION</span><select [value]="approachSide()" (change)="approachSide.set($any($event.target).value)"><option value="bearing">Along listed bearing (090°)</option><option value="opposite">Opposite bearing (270°)</option></select></label>
+      <label><span>IRON NEST POSITION</span><input type="text" [value]="nestGrid()" (input)="nestGrid.set($any($event.target).value)" placeholder="C2 5:6"></label>
+      <label><span>ROUTE REFERENCE / ARRIVAL GRID</span><input type="text" [value]="stationGrid()" (input)="stationGrid.set($any($event.target).value)" placeholder="J6 0:4"></label>
+      <label><span>ROUTE BEARING FROM REFERENCE (°)</span><input type="text" inputmode="decimal" [value]="railBearing()" (input)="railBearing.set($any($event.target).value)" placeholder="90"></label>
+      <label><span>DIRECTION FROM REFERENCE</span><select [value]="approachSide()" (change)="approachSide.set($any($event.target).value)">
+          <option value="bearing">Along entered bearing</option><option value="opposite">Opposite the bearing</option>
+        </select></label>
     </div>
-    <p class="train-note">Rail alignment is bidirectional. Choose the actual side from which the train approaches; this cannot be inferred from the line bearing alone.</p>
+    <p class="train-note">Distances are measured from the reference/arrival point backward along the route. Set the side correctly: a 090° line alone does not specify movement direction. Use the map button to inspect calculated waypoint markers.</p>
 
-    <div class="train-map-head">
+    <div class="train-stops-heading">
+      <div><span class="train-kicker">WAYPOINTS // GAME TIMETABLE</span><h3>Reported waypoints</h3></div>
+      <button type="button" class="train-reset" (click)="addWaypoint()">+ WAYPOINT</button>
+    </div>
+    <div class="waypoint-list">
+      @for(stop of stops();track $index;let i=$index;let last=$last){
+        <div class="waypoint-row">
+          <div class="waypoint-num">{{ i+1 }}</div>
+          <label class="waypoint-name"><span>LOCATION</span><input type="text" [value]="stop.name" (input)="setStopName(i,$any($event.target).value)"></label>
+          <label><span>DISTANCE TO REFERENCE (KM)</span><input type="text" inputmode="decimal" [disabled]="last" [value]="stop.kmFromStation" (input)="setStopDistance(i,$any($event.target).value)"></label>
+          <label><span>GAME CLOCK (HH:MM:SS)</span><input type="text" inputmode="numeric" [value]="stop.time" (input)="setStopTime(i,$any($event.target).value)" placeholder="10:06:50"></label>
+          <div class="waypoint-action">
+            @if(!last&&stops().length>2){<button type="button" (click)="removeWaypoint(i)" [attr.aria-label]="'Remove '+stop.name">×</button>}
+            @if(last){<span>ARRIVAL</span>}
+          </div>
+        </div>
+      }
+    </div>
+    @if(checked().error){<p class="train-error">{{ checked().error }}</p>}
+    @if(segmentSpeeds();as speeds){
+      <div class="train-segment-title">SPEED BETWEEN REPORTS</div>
+      <div class="train-speed-list">
+        @for(speed of speeds;track $index){
+          <div><span>{{ stops()[$index].name }} → {{ stops()[$index+1].name }}</span><strong>{{ speed | number:'1.1-1' }} km/h</strong></div>
+        }
+      </div>
+    }
+  </section>
+
+  <aside class="train-result-area">
+    <section class="train-solution">
+      <div class="train-solution-top"><span class="train-kicker">WAYPOINT SOLUTION</span><span class="train-live">PREDICTED</span></div>
+      <h2>Intercept position</h2>
+      <label class="train-field"><span>IMPACT AT</span>
+        <select [value]="impactMode()" (change)="impactMode.set($any($event.target).value)">
+          @for(stop of stops();track $index){<option [value]="$index">{{ stop.name }} — {{ stop.time }}</option>}
+          <option value="custom">Custom game time</option>
+        </select>
+      </label>
+      @if(impactMode()==='custom'){
+        <label class="train-field"><span>GAME IMPACT CLOCK (HH:MM:SS)</span>
+          <input type="text" inputmode="numeric" placeholder="10:11:50" [value]="customImpactClock()" (input)="customImpactClock.set($any($event.target).value)">
+        </label>
+      }
+      @if(calculated().ok){
+        @if($any(calculated()).result;as p){
+          <div class="train-target-block">
+            <div class="train-kicker">TARGET PREDICTED AT {{ selectedImpact() }}</div>
+            <strong>{{ p.grid || 'OUTSIDE MAP' }}</strong>
+            <span>{{ p.kmFromStation | number:'1.2-2' }} km from reference · {{ p.speedKmh | number:'1.1-1' }} km/h</span>
+          </div>
+          <div class="train-metrics">
+            <div><span>BEARING</span><strong>{{ p.bearingFromNest | number:'1.2-2' }}°</strong></div>
+            <div><span>RANGE</span><strong>{{ p.rangeKm | number:'1.2-2' }} km</strong></div>
+            @if(firing();as f){
+              <div><span>CHARGES</span><strong>{{ f.charge }}</strong></div>
+              <div><span>ELEVATION</span><strong>{{ f.elevation | number:'1.2-2' }}°</strong></div>
+            }
+          </div>
+          @if(!p.grid){<p class="train-error">The position falls outside the provisional map boundaries. Confirm approach direction.</p>}
+          @if(!firing()){<p class="train-error">Target outside the six-charge firing range.</p>}
+        }
+      } @else {<p class="train-error">{{ $any(calculated()).error }}</p>}
+      <div class="train-flight">
+        <h3>Fire timing</h3>
+        <p>Experimental flight-time estimate from charge-dependent shell speed. Measured in-game flight time overrides it; launch delay is not included.</p>
+        @if(estimatedFlight();as estimate){<div class="train-estimate"><span>ESTIMATED FLIGHT (UNVERIFIED MODEL)</span><strong>{{estimate | number:'1.2-2'}} s</strong></div>}
+        <label class="train-field"><span>MEASURED PROJECTILE FLIGHT (SECONDS)</span><input type="text" inputmode="decimal" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)" placeholder="e.g. 12.4"></label>
+        @if(launchTime();as fire){
+          <div class="train-launch"><span>FIRE AT GAME TIME ({{flightIsMeasured()?'MEASURED':'ESTIMATE'}})</span><strong>{{ fire.display }}</strong>@if(fire.previousDay){<small>PREVIOUS DAY</small>}</div>
+        } @else {
+          <div class="train-launch muted"><span>FIRE TIME</span><strong>NOT CALCULATED</strong></div>
+        }
+        @if(clockError()){<p class="train-error">{{ clockError() }}</p>}
+      </div>
+      <label class="train-field"><span>TARGET DESCRIPTION</span><input type="text" maxlength="50" [value]="targetLabel()" (input)="targetLabel.set($any($event.target).value)"></label>
+      <div class="route-equipment">
+        <label class="train-field"><span>SHELL TYPE</span><select [value]="shell()" (change)="setShell($any($event.target).value)">
+          @for(s of shellOptions;track s){<option [value]="s">{{s}}</option>}
+        </select></label>
+        <label class="train-field"><span>CANNON</span><select [value]="cannon()" (change)="setCannon($any($event.target).value)">
+          <option value="left">Left</option><option value="right">Right</option>
+        </select></label>
+      </div>
+      <button class="train-send" type="button" [disabled]="!calculated().ok || !firing()" (click)="transfer()">+ FIRE SOLUTION →</button>
+      @if(notice()){<p class="train-feedback" role="status">{{ notice() }}</p>}
+    </section>
+    <p class="train-disclaimer">Game companion: linear movement is interpolated between waypoint reports; the model does not extrapolate beyond the supplied timetable. Check the route orientation and reference coordinates in-game. Reported High Tide speed is a player observation, not a hardcoded game constant.</p>
+  </aside>
+</div>
+
+@if(routeMapOpen()){
+  <div class="route-map-overlay" (click)="closeRouteMap()" role="presentation">
+    <section class="route-map-dialog" role="dialog" aria-modal="true" aria-label="Waypoint route map" (click)="$event.stopPropagation()">
+      <div class="route-map-title"><strong>WAYPOINT MARKERS · {{routeName()}}</strong>
+        <button type="button" class="train-reset" (click)="closeRouteMap()" aria-label="Close map">× CLOSE</button></div>
+          <div class="train-map-head">
       <span class="train-kicker">02 // TRACK PLOT</span>
       @if(calculated().ok){<span class="status-online">TRACK SOLVED</span>}
     </div>
@@ -68,85 +199,7 @@
     </div>
     <p class="train-note">Map axis convention is provisional. Verify against the in-game map before using a predicted aimpoint.</p>
 
-    <div class="train-stops-heading">
-      <div><span class="train-kicker">03 // MOVEMENT TIMETABLE</span><h3>Reported waypoints</h3></div>
-      <button type="button" class="train-reset" (click)="addWaypoint()">+ WAYPOINT</button>
-    </div>
-    <div class="waypoint-list">
-      @for(stop of stops();track $index;let i=$index;let last=$last){
-        <div class="waypoint-row">
-          <div class="waypoint-num">{{ i+1 }}</div>
-          <label class="waypoint-name"><span>LOCATION</span><input type="text" [value]="stop.name" (input)="setStopName(i,$any($event.target).value)"></label>
-          <label><span>DISTANCE TO STATION (KM)</span><input type="text" inputmode="decimal" [disabled]="last" [value]="stop.kmFromStation" (input)="setStopDistance(i,$any($event.target).value)"></label>
-          <label><span>GAME CLOCK (HH:MM:SS)</span><input type="text" inputmode="numeric" [value]="stop.time" (input)="setStopTime(i,$any($event.target).value)" placeholder="10:06:50"></label>
-          <div class="waypoint-action">
-            @if(!last&&stops().length>2){<button type="button" (click)="removeWaypoint(i)" [attr.aria-label]="'Remove '+stop.name">×</button>}
-            @if(last){<span>ARRIVAL</span>}
-          </div>
-        </div>
-      }
-    </div>
-    @if(checked().error){<p class="train-error">{{ checked().error }}</p>}
-    @if(segmentSpeeds();as speeds){
-      <div class="train-segment-title">SPEED BETWEEN REPORTS</div>
-      <div class="train-speed-list">
-        @for(speed of speeds;track $index){
-          <div><span>{{ stops()[$index].name }} → {{ stops()[$index+1].name }}</span><strong>{{ speed | number:'1.1-1' }} km/h</strong></div>
-        }
-      </div>
-    }
-  </section>
 
-  <aside class="train-result-area">
-    <section class="train-solution">
-      <div class="train-solution-top"><span class="train-kicker">04 // INTERCEPT SOLUTION</span><span class="train-live">PREDICTED</span></div>
-      <h2>Intercept target</h2>
-      <label class="train-field"><span>IMPACT AT</span>
-        <select [value]="impactMode()" (change)="impactMode.set($any($event.target).value)">
-          @for(stop of stops();track $index){<option [value]="$index">{{ stop.name }} — {{ stop.time }}</option>}
-          <option value="custom">Custom game time</option>
-        </select>
-      </label>
-      @if(impactMode()==='custom'){
-        <label class="train-field"><span>GAME IMPACT CLOCK (HH:MM:SS)</span>
-          <input type="text" inputmode="numeric" placeholder="10:11:50" [value]="customImpactClock()" (input)="customImpactClock.set($any($event.target).value)">
-        </label>
-      }
-      @if(calculated().ok){
-        @if($any(calculated()).result;as p){
-          <div class="train-target-block">
-            <div class="train-kicker">TRAIN PREDICTED AT {{ selectedImpact() }}</div>
-            <strong>{{ p.grid || 'OUTSIDE MAP' }}</strong>
-            <span>{{ p.kmFromStation | number:'1.2-2' }} km from station · {{ p.speedKmh | number:'1.1-1' }} km/h</span>
-          </div>
-          <div class="train-metrics">
-            <div><span>BEARING</span><strong>{{ p.bearingFromNest | number:'1.2-2' }}°</strong></div>
-            <div><span>RANGE</span><strong>{{ p.rangeKm | number:'1.2-2' }} km</strong></div>
-            @if(firing();as f){
-              <div><span>CHARGES</span><strong>{{ f.charge }}</strong></div>
-              <div><span>ELEVATION</span><strong>{{ f.elevation | number:'1.2-2' }}°</strong></div>
-            }
-          </div>
-          @if(!p.grid){<p class="train-error">The position falls outside the provisional map boundaries. Confirm approach direction.</p>}
-          @if(!firing()){<p class="train-error">Target outside the six-charge firing range.</p>}
-        }
-      } @else {<p class="train-error">{{ $any(calculated()).error }}</p>}
-      <div class="train-flight">
-        <h3>Fire timing</h3>
-        <p>Experimental flight-time estimate from charge-dependent shell speed. Measured in-game flight time overrides it; launch delay is not included.</p>
-        @if(estimatedFlight();as estimate){<div class="train-estimate"><span>ESTIMATED FLIGHT (UNVERIFIED MODEL)</span><strong>{{estimate | number:'1.2-2'}} s</strong></div>}
-        <label class="train-field"><span>MEASURED PROJECTILE FLIGHT (SECONDS)</span><input type="text" inputmode="decimal" [value]="flightSeconds()" (input)="flightSeconds.set($any($event.target).value)" placeholder="e.g. 12.4"></label>
-        @if(launchTime();as fire){
-          <div class="train-launch"><span>FIRE AT GAME TIME ({{flightIsMeasured()?'MEASURED':'ESTIMATE'}})</span><strong>{{ fire.display }}</strong>@if(fire.previousDay){<small>PREVIOUS DAY</small>}</div>
-        } @else {
-          <div class="train-launch muted"><span>FIRE TIME</span><strong>NOT CALCULATED</strong></div>
-        }
-        @if(clockError()){<p class="train-error">{{ clockError() }}</p>}
-      </div>
-      <label class="train-field"><span>TARGET DESCRIPTION</span><input type="text" maxlength="50" [value]="targetLabel()" (input)="targetLabel.set($any($event.target).value)"></label>
-      <button class="train-send" type="button" [disabled]="!calculated().ok || !firing()" (click)="transfer()">USE IN FIRING CALCULATOR →</button>
-      @if(notice()){<p class="train-feedback" role="status">{{ notice() }}</p>}
     </section>
-    <p class="train-disclaimer">This is a fan-made game companion, not real-world ballistics. Calculated train motion is interpolated between observations; route direction and map coordinates remain player-verifiable. The number and length of railcars are not represented until further information is supplied.</p>
-  </aside>
-</main>
+  </div>
+}

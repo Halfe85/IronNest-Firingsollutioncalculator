@@ -63,3 +63,28 @@ test('midnight crossing is represented without a system clock',()=>{
   assert.equal(p.ok,true);
   if(p.ok)assert.ok(Math.abs(p.result.kmFromStation-1)<1e-9);
 });
+
+test('new Valle de Mula playthrough keeps its C2 5:6 Iron Nest position',()=>{
+  const current={...mission,nestGrid:'C2 5:6'};
+  const outcome=trainPositionAt(current,'10:10:10');
+  assert.equal(outcome.ok,true);
+  if(!outcome.ok)return;
+  assert.equal(outcome.result.grid,'N6 0:4');
+  assert.ok(Math.abs(outcome.result.distanceKm-11.166)<0.02);
+  assert.ok(outcome.result.bearingFromNest>60 && outcome.result.bearingFromNest<90);
+});
+test('High Tide route math can reuse a reference and speed while leaving actual mission ETA editable',()=>{
+  // Fictional test reference, NOT a claimed High Tide mission coordinate or timestamp.
+  const route={...mission,nestGrid:'C2 5:6',stationGrid:'J6 0:4',
+    railBearing:0,approachSide:'bearing' as const,stops:[
+      {name:'5km out',kmFromStation:5,time:'10:00:00'},
+      {name:'Landing',kmFromStation:0,time:'10:08:20'}
+    ]};
+  assert.deepEqual(waypointSpeeds(route.stops),[36]);
+  const outcome=trainPositionAt(route,'10:03:20');
+  assert.equal(outcome.ok,true);
+  if(!outcome.ok)return;
+  assert.equal(outcome.result.grid,'J9 0:4');
+  assert.ok(Math.abs(outcome.result.kmFromStation-3)<1e-8);
+  assert.equal(trainPositionAt(route,'09:59:59').ok,false);
+});

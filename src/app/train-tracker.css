@@ -57,3 +57,16 @@
 .train-estimate{display:flex;justify-content:space-between;align-items:center;gap:13px;padding:11px;background:#243326;border:1px solid #49644a;border-radius:5px;margin-bottom:13px}
 .train-estimate span{font-size:10px;font-weight:850;color:#a5c29f}
 .train-estimate strong{font-size:22px;font-variant-numeric:tabular-nums;color:#f4daaa;white-space:nowrap}
+
+/* Route mode lives inside Tactical Plotter. Keep the route map out of the scrolling workspace. */
+.route-presets{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;align-items:end;gap:8px;margin:10px 0}
+.route-presets .train-field{margin:0}
+.route-nest-sync{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}
+.route-nest-sync span{color:#9cad9b;font-size:11px;line-height:1.4}
+.route-equipment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}
+.route-map-overlay{position:fixed;inset:0;z-index:1150;background:#030805d9;display:flex;justify-content:center;align-items:center;padding:12px}
+.route-map-dialog{width:min(1100px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:#18251b;border:1px solid #68795b;border-radius:9px;padding:14px}
+.route-map-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-size:12px;color:#f7dcad}
+.route-map-dialog .train-map-scroll{max-height:calc(100dvh - 160px)}
+@media(max-width:760px){.route-presets{grid-template-columns:1fr 1fr}.route-presets button{width:100%}}
+@media(max-width:420px){.route-presets{grid-template-columns:1fr 1fr}.route-map-dialog{padding:8px}.route-map-title{font-size:10px}}

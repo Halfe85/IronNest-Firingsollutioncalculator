@@ -1,11 +1,10 @@
 import {CommonModule} from '@angular/common';
 import {Component, HostListener, computed, effect, signal} from '@angular/core';
 import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter';
-import {TrainTrackerComponent} from './train-tracker';
 import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 
-type Tab='calc'|'plot'|'shots'|'train';
+type Tab='calc'|'plot'|'shots';
 type ShotState='pending'|'hit'|'miss';
 interface ShotCard{
   id:string;label:string;createdAt:string;shell:string; bearing:number;
@@ -21,7 +20,7 @@ function uid():string {
 }
 @Component({
   selector:'app-root',standalone:true,
-  imports:[CommonModule,TacticalPlotterComponent,TrainTrackerComponent],
+  imports:[CommonModule,TacticalPlotterComponent],
   templateUrl:'./app.html',styleUrl:'./app.css'
 })
 export class AppComponent {
@@ -146,10 +145,6 @@ export class AppComponent {
   addFromPlot(data:PlotFireRequest):void{
     const charge=Math.ceil(data.distanceKm/5);
     this.makeShot({...data,charges:charge,shell:data.shell,cannon:data.cannon});
-  }
-  addFromTrain(data:{bearing:number;distanceKm:number;target:string;impactClock:string;flightSeconds:string}):void{
-    const charge=Math.ceil(data.distanceKm/5);
-    this.makeShot({label:data.target,bearing:data.bearing,distanceKm:data.distanceKm,charges:charge});
   }
   markHit(id:string):void{
     this.shots.update(rows=>rows.map(s=>s.id===id?{...s,state:'hit',missKm:null}:s));

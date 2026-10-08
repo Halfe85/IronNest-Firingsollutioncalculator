@@ -1,0 +1,39 @@
+<div class="map-viewport" tabindex="0" role="region" aria-label="Scrollable plot map, with spotter and reference markers">
+  <svg viewBox="0 0 960 515" class="plot-svg" role="img"
+       aria-label="Iron Nest, spotters, calculated references and bearings or distance circles for the active point">
+    <defs><clipPath id="shared-plot-clip"><rect x="45" y="30" width="880" height="440"/></clipPath></defs>
+    <rect x="45" y="30" width="880" height="440" fill="#16231c"/>
+    @for(col of columns;track col;let i=$index){
+      <line [attr.x1]="x(i)" [attr.x2]="x(i)" y1="30" y2="470" class="map-line"/>
+      <text [attr.x]="x(i+.5)" y="21" text-anchor="middle" class="map-text">{{col}}</text>
+    }
+    @for(row of rows;track row){
+      <line x1="45" x2="925" [attr.y1]="y(row-1)" [attr.y2]="y(row-1)" class="map-line"/>
+      <text x="25" [attr.y]="y(row-.5)+4" class="map-text" text-anchor="middle">{{row}}</text>
+    }
+    <line x1="925" x2="925" y1="30" y2="470" class="map-line"/>
+    <line x1="45" x2="925" y1="470" y2="470" class="map-line"/>
+    <g clip-path="url(#shared-plot-clip)">
+      @for(obs of observations;track obs.id){
+        @if(obs.type==='range'){
+          <circle [attr.cx]="x(obs.source.x)" [attr.cy]="y(obs.source.y)"
+            [attr.r]="obs.value*44" class="observation-circle"/>
+        }@else if(obs.type==='bearing'){
+          <line [attr.x1]="x(obs.source.x)" [attr.y1]="y(obs.source.y)"
+            [attr.x2]="rayX(obs)" [attr.y2]="rayY(obs)" class="observation-line"/>
+        }@else{
+          <path [attr.d]="sectorPath(obs)" class="observation-sector"/>
+        }
+      }
+      @for(marker of markers;track marker.id){
+        <circle [attr.cx]="x(marker.p.x)" [attr.cy]="y(marker.p.y)"
+          [attr.r]="marker.id===highlightId?13:9"
+          [attr.fill]="marker.role==='nest'?'#efbc75':marker.role==='spotter'?'#8bbee1':marker.role==='reference'?'#e2ce97':'#f18a75'"
+          stroke="#141b17" stroke-width="2"/>
+        <text class="map-marker-text" [attr.x]="x(marker.p.x)+12" [attr.y]="y(marker.p.y)-9">
+          {{marker.name}} ({{marker.grid}})
+        </text>
+      }
+    </g>
+  </svg>
+</div>

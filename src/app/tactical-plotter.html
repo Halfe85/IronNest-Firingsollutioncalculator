@@ -1,3 +1,11 @@
+<div class="plot-mode-switch" role="group" aria-label="Automatic plotter mode">
+  <button type="button" [class.selected]="plottingMode()==='normal'" [attr.aria-pressed]="plottingMode()==='normal'"
+    (click)="setMode('normal')">NORMAL PLOTTING</button>
+  <button type="button" [class.selected]="plottingMode()==='waypoint'" [attr.aria-pressed]="plottingMode()==='waypoint'"
+    (click)="setMode('waypoint')">WAYPOINT TARGETING</button>
+</div>
+
+@if(plottingMode()==='normal'){
 <div class="plot-surface">
   <div class="plot-control">
     <label class="mission-heading"><span>MISSION</span>
@@ -54,6 +62,10 @@
   </div>
   @if(status()){<p class="plot-status" role="status">{{status()}}</p>}
 </div>
+} @else {
+  <app-train-tracker [availableReferences]="resolvedReferences()" [currentNestGrid]="nestGridText()"
+    (useSolution)="useMovingSolution($event)"></app-train-tracker>
+}
 
 @if(modal()==='node'){
   <div class="plot-overlay" (click)="closeModal()" role="presentation">
@@ -69,7 +81,22 @@
             @if(node.grid){<app-grid-select [value]="node.grid" (valueChange)="setActiveGrid($event)"></app-grid-select>}
           </div>
         } @else {
-          <div class="report-heading"><strong>REPORTS</strong><button type="button" (click)="addReport()">+ Observation</button></div>
+          <div class="report-heading"><strong>REPORTS</strong>
+            <div class="report-buttons">
+              <button type="button" class="map-marker-toggle" (click)="observationMapVisible.set(!observationMapVisible())">
+                {{observationMapVisible()?'HIDE':'SHOW'}} MAP MARKERS
+              </button>
+              <button type="button" (click)="addReport()">+ Observation</button>
+            </div>
+          </div>
+          @if(observationMapVisible()){
+            <div class="observation-map-panel">
+              <app-plot-map [markers]="mapMarkers()" [observations]="activeObservations()" [highlightId]="node.id"></app-plot-map>
+              <div class="map-preview-actions"><small>Live origin markers, bearings and distance circles</small>
+                <button type="button" (click)="showMapFromObservations()">FULL MAP ↗</button>
+              </div>
+            </div>
+          }
           @for(report of node.reports;track report.id){
             <div class="intel-line">
               <label><span>FROM</span><select [value]="report.sourceId" (change)="modifyReport(report.id,'sourceId',$any($event.target).value)">
@@ -153,31 +180,9 @@
     <section class="plot-dialog map-dialog" role="dialog" aria-modal="true" aria-label="Tactical map" (click)="$event.stopPropagation()">
       <header class="dialog-heading">
         <div><span class="micro-label">MAP OVERLAY</span><h2>{{name()}}</h2></div>
-        <button type="button" class="close-x" (click)="closeModal()" aria-label="Close map">×</button>
+        <button type="button" class="close-x" (click)="backFromMap()" [attr.aria-label]="activeId()?'Back to point details':'Close map'">{{activeId()?'←':'×'}}</button>
       </header>
-      <div class="map-viewport" tabindex="0" role="region" aria-label="Scrollable grid map">
-        <svg viewBox="0 0 960 515" class="plot-svg" role="img" aria-label="Iron Nest, spotters, reference points and targets">
-          <rect x="45" y="30" width="880" height="440" fill="#16231c"/>
-          @for(col of mapColumns;track col;let i=$index){
-            <line [attr.x1]="mapX(i)" [attr.x2]="mapX(i)" y1="30" y2="470" class="map-line"/>
-            <text [attr.x]="mapX(i+.5)" y="21" text-anchor="middle" class="map-text">{{col}}</text>
-          }
-          @for(row of mapRows;track row){
-            <line x1="45" x2="925" [attr.y1]="mapY(row-1)" [attr.y2]="mapY(row-1)" class="map-line"/>
-            <text x="25" [attr.y]="mapY(row-.5)+4" class="map-text" text-anchor="middle">{{row}}</text>
-          }
-          <line x1="925" x2="925" y1="30" y2="470" class="map-line"/>
-          <line x1="45" x2="925" y1="470" y2="470" class="map-line"/>
-          @for(marker of mapMarkers();track marker.id){
-            <circle [attr.cx]="mapX(marker.p.x)" [attr.cy]="mapY(marker.p.y)" r="9"
-              [attr.fill]="marker.role==='nest'?'#efbc75':marker.role==='spotter'?'#8bbee1':marker.role==='reference'?'#e2ce97':'#f18a75'"
-              stroke="#141b17" stroke-width="2"/>
-            <text class="map-marker-text" [attr.x]="mapX(marker.p.x)+12" [attr.y]="mapY(marker.p.y)-9">
-              {{marker.name}} ({{marker.grid}})
-            </text>
-          }
-        </svg>
-      </div>
+      <app-plot-map [markers]="mapMarkers()" [observations]="activeObservations()" [highlightId]="activeId()"></app-plot-map>
       <p class="map-note">Provisional grid orientation. Swipe sideways on a phone to inspect the full map.</p>
     </section>
   </div>

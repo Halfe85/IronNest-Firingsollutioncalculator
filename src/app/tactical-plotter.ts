@@ -44,9 +44,17 @@ export class TacticalPlotterComponent{
   readonly active=computed(()=>this.nodes().find(n=>n.id===this.activeId()));
   readonly activeResult=computed(()=>this.solution().get(this.activeId()??''));
   readonly originOptions=computed(()=>this.nodes().filter(n=>n.id!==this.activeId()));
-  readonly mapMarkers=computed(()=>this.solution().results.flatMap(result=>
-    result.position?[{id:result.node.id,name:result.node.name,role:result.node.role,
-      p:result.position,grid:formatGrid(result.position)}]:[]));
+  readonly mapMarkers=computed(()=>this.solution().results.flatMap(result=>{
+    if(result.position)return [{
+      id:result.node.id,name:result.node.name,role:result.node.role,
+      p:result.position,grid:formatGrid(result.position)
+    }];
+    if(result.node.id===this.activeId())return result.candidates.map((p,i)=>({
+      id:result.node.id+'-option-'+i,name:result.node.name+' #'+(i+1),
+      role:result.node.role,p,grid:formatGrid(p)
+    }));
+    return [];
+  }));
   readonly formatGrid=formatGrid;
   readonly mapColumns='ABCDEFGHIJKLMNOPQRST'.split('');
   readonly mapRows=Array.from({length:10},(_,i)=>10-i);

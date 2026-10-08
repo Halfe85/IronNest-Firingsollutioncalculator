@@ -9,7 +9,6 @@
       <button type="button" [class.active]="tab()==='calc'" (click)="selectTab('calc')">Calculate</button>
       <button type="button" [class.active]="tab()==='plot'" (click)="selectTab('plot')">Tactical Plotter</button>
       <button type="button" [class.active]="tab()==='shots'" (click)="selectTab('shots')">Fire Solutions <span class="tab-count">{{shots().length}}</span></button>
-      <button type="button" [class.active]="tab()==='train'" (click)="selectTab('train')">Train</button>
     </nav>
 
     <div class="tab-content">
@@ -99,9 +98,6 @@
             </article>
           }
         </div>
-      }
-      @if(tab()==='train'){
-        <app-train-tracker (useSolution)="addFromTrain($event)"></app-train-tracker>
       }
       @if(error()){<div role="alert" class="inline-error">{{error()}}</div>}
     </div>
