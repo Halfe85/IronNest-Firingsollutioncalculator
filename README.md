@@ -58,3 +58,11 @@ Set the positions of Iron Nest and three spotters, then enter range, bearing, or
 Tap **Use in firing calculator** to transfer target name, Nest-relative bearing and range. Save markers locally; the map and reports remain available after refresh. Drag sideways on narrow phone displays; toggle the 100 m subgrid for close inspection.
 
 **Limitations:** The geometry assumes 1 km cells with sub-digits treated as 100 m point offsets from each cell's bottom-left. Player-map marker placement can introduce ~100 m uncertainty. Values are based on reported distances, bearings and compass sectors; corroborate in the current game before firing. The map is a locally drawn coordinate map, not a copy of the game's terrain artwork.
+
+## Multiple missions & changing orders
+
+Every playthrough can use a different Iron Nest position, spotter positions and target count. In the **Tactical map** tab you can **New run**, add/rename/remove targets, select each target's own evidence, and **Save mission** snapshots locally. Changing targets preserves each target's reports. The map shows candidate markers for every currently calculable target; unresolved targets remain unresolved. A second candidate is **not** silently discarded.
+
+Use **Load artillery example** to try the screenshot example with Iron Nest `I6 5:3` and spotters `I10 5:8`, `M7 1:5`, `L1 7:7`. Its first two bearing pairs produce **no valid forward intersection under our currently provisional axis convention**; the third target (6.21 km from Spotter #3 and 5.77 km from Spotter #1) produces *two* candidate cells, `G5 7:3` and `N7 4:7`. This is intentionally flagged rather than assigned a guessed firing solution.
+
+**Map-axis calibration outstanding:** The in-game map artwork/orientation has not been confirmed. A screenshot of the full grid map with compass labels is required to verify the letter/number axis directions before treating these plot solutions as game-accurate. The calculator's artillery elevation math is separate from map orientation.

@@ -69,3 +69,29 @@ test('invalid and incomplete target reports stay unresolved',()=>{
   assert.ok(triangulate(positions,[{observer:'spotter3',kind:'bearing',value:'361'},observations[0]]).error);
   assert.ok(triangulate(positions,[{observer:'spotter2',kind:'range',value:'-1'},observations[1]]).error);
 });
+
+test('artillery mission can represent contradictory bearings and multiple target candidates',()=>{
+  const artillery={nest:'I6 5:3',spotter1:'I10 5:8',spotter2:'M7 1:5',spotter3:'L1 7:7'};
+  assert.deepEqual(parseGrid('I10 5:8'),{x:8.5,y:9.8});
+  const target1=triangulate(artillery,[
+    {observer:'spotter1',kind:'bearing',value:'233'},
+    {observer:'spotter2',kind:'bearing',value:'104'}
+  ]);
+  const target2=triangulate(artillery,[
+    {observer:'spotter1',kind:'bearing',value:'187'},
+    {observer:'spotter3',kind:'bearing',value:'50'}
+  ]);
+  // With the current provisional map-axis interpretation, those forward
+  // bearing rays do not intersect: never generate an invented firing solution.
+  assert.equal(target1.candidates.length,0);
+  assert.equal(target2.candidates.length,0);
+  assert.ok(target1.error);
+  assert.ok(target2.error);
+  const target3=triangulate(artillery,[
+    {observer:'spotter3',kind:'range',value:'6.21'},
+    {observer:'spotter1',kind:'range',value:'5.77'}
+  ]);
+  assert.equal(target3.error,null);
+  assert.deepEqual(target3.candidates.map(c=>c.grid).sort(),['G5 7:3','N7 4:7']);
+  assert.equal(target3.candidates.length,2);
+});

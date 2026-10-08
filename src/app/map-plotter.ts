@@ -251,6 +251,12 @@ export class MapPlotterComponent {
     this.savedTargets.set([]);
     this.notice.set('Original triangulation example restored.');
   }
+  targetStatus(id:number):string{
+    const plot=this.targetPlots().find(item=>item.id===id);
+    if(!plot || !plot.candidates.length)return 'UNRESOLVED';
+    if(plot.candidates.length>1)return plot.candidates.length+' POSSIBLE POSITIONS';
+    return plot.candidates[0].grid;
+  }
   chooseCandidate(index:number):void{this.selectedIndex.set(index);this.notice.set('');}
   applySolution():void{
     const candidate=this.candidate();
