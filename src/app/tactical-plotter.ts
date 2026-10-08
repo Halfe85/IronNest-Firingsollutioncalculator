@@ -39,6 +39,7 @@ export class TacticalPlotterComponent{
   readonly mapMarkers=computed(()=>this.solution().results.flatMap(result=>
     result.position?[{id:result.node.id,name:result.node.name,role:result.node.role,
       p:result.position,grid:formatGrid(result.position)}]:[]));
+  readonly formatGrid=formatGrid;
   readonly mapColumns='ABCDEFGHIJKLMNOPQRST'.split('');
   readonly mapRows=Array.from({length:10},(_,i)=>10-i);
   constructor(){

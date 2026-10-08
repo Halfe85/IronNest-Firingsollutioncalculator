@@ -140,7 +140,7 @@ export class AppComponent {
   }
   openMiss(id:string):void{
     this.selectedMissShot.set(id);this.activeShotId.set(id);
-    this.missInput.set('');this.modal.set('miss');
+    this.missInput.set('');this.error.set('');this.modal.set('miss');
   }
   saveMiss():void{
     const id=this.selectedMissShot();
