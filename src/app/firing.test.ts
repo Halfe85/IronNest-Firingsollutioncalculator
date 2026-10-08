@@ -122,3 +122,20 @@ test('fan flight model charge speeds and invalid inputs', () => {
   assert.equal(estimatedShellSpeedKms(0), null);
   assert.equal(estimatedShellSpeedKms(7), null);
 });
+
+test('registered flight-time field samples preserve both clock and shot observations', async () => {
+  const { FLIGHT_FIELD_SAMPLES, compareFlightSample } = await import('./flight-field-data.ts');
+  assert.deepEqual(FLIGHT_FIELD_SAMPLES.map(s=>s.id),['F01','F02','F03']);
+  assert.deepEqual(FLIGHT_FIELD_SAMPLES.map(s=>s.charges),[2,1,2]);
+  assert.deepEqual(FLIGHT_FIELD_SAMPLES.map(s=>s.observedFlightWindowSeconds),[[34,34],[18,19],[30,31]]);
+  assert.deepEqual(FLIGHT_FIELD_SAMPLES.map(s=>s.impactClockWindow),[['34','34'],['18','19'],['40','41']]);
+  assert.equal(FLIGHT_FIELD_SAMPLES[1].bearingDeg,null); // not stated by player
+  assert.equal(FLIGHT_FIELD_SAMPLES[2].shell,null); // shell unspecified
+  const comparisons=FLIGHT_FIELD_SAMPLES.map(s=>compareFlightSample(s)!);
+  assert.deepEqual(comparisons.map(c=>Number(c.modelSeconds.toFixed(2))),[34.26,17.62,28.70]);
+  assert.deepEqual(comparisons.map(c=>Number(c.modelElevationDeg.toFixed(2))),[53.64,44.40,44.94]);
+  assert.deepEqual(comparisons[2].displayedVsStopwatchWindow,[1.1000000000000014,2.1000000000000014]);
+  assert.ok(Math.abs(comparisons[1].modelVsDisplayedSeconds+1.38095)<0.002);
+  assert.ok(Math.abs(comparisons[2].modelVsDisplayedSeconds+0.1983)<0.002);
+  // An apparent firing delay in F03 is NOT assumed to be a universal constant.
+});
