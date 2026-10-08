@@ -174,7 +174,7 @@
   <div class="plot-overlay" (click)="closeModal()" role="presentation">
     <section class="plot-dialog map-dialog" role="dialog" aria-modal="true" aria-label="Tactical map" (click)="$event.stopPropagation()">
       <header class="dialog-heading">
-        <div><span class="micro-label">MAP OVERLAY</span><h2>{{name()}}</h2></div>
+        <div><span class="micro-label">MAP OVERLAY</span><h2>Observation Map</h2></div>
         <button type="button" class="close-x" (click)="backFromMap()" [attr.aria-label]="activeId()?'Back to point details':'Close map'">{{activeId()?'←':'×'}}</button>
       </header>
       <app-plot-map [markers]="mapMarkers()" [observations]="activeObservations()" [highlightId]="activeId()"></app-plot-map>

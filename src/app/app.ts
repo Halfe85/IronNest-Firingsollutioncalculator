@@ -39,6 +39,7 @@ function uid():string {
   templateUrl:'./app.html',styleUrl:'./app.css'
 })
 export class AppComponent {
+  readonly gridInputLabel=gridInputLabel;
   readonly charges=CHARGES;
   readonly shells=SHELLS;
   readonly tab=signal<Tab>('calc');
