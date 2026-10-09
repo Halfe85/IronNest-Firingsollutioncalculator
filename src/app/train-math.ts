@@ -20,10 +20,21 @@ export interface TrainStop {
   /** Per-waypoint compass reading and direction from the route arrival reference. */
   routeBearing?:number|null;
   routeDirection?:'bearing'|'opposite';
+  /** Source of the bearing, not necessarily the route's arrival grid. */
+  routeReferenceId?:string;
+  /** Geometric offset from that source; distinct from distance remaining along the route. */
+  routeDistanceKm?:number|null;
   /** Per-waypoint orientation when using another waypoint as a reference. */
   relativeDirection?:'bearing'|'opposite';
 }
+export interface NamedRouteReference {
+  id:string;
+  name:string;
+  grid:string;
+}
 export interface TrainSchedule {
+  /** Optional independent reference/observer coordinates for a waypoint route. */
+  references?:NamedRouteReference[];
   nestGrid: string;
   stationGrid: string;
   railBearing: number;

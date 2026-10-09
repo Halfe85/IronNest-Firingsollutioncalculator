@@ -41,6 +41,23 @@ export function resolveWaypointPositions(schedule:TrainSchedule):WaypointResolut
   const status=Array(n).fill(0);
   const arrival=parseGrid(schedule.stationGrid);
   const map=new Map(steps.map((s,i)=>[s.id,i]));
+  const namedReferences=new Map((schedule.references??[]).map(ref=>[ref.id,ref]));
+  function getOrigin(sourceId:string,currentIndex:number):{point:Point|null;error:string|null} {
+    if(sourceId==='arrival')return {
+      point:arrival,error:arrival?null:'Set the arrival / reference grid'
+    };
+    if(sourceId.startsWith('ref:')){
+      const named=namedReferences.get(sourceId.slice(4));
+      if(!named)return {point:null,error:'Named reference point not found'};
+      const point=parseGrid(named.grid);
+      return {point,error:point?null:'Set a valid grid for '+named.name};
+    }
+    const other=map.get(sourceId);
+    if(other===undefined)return {point:null,error:'Referenced waypoint not found'};
+    if(other===currentIndex)return {point:null,error:'A waypoint cannot reference itself'};
+    const point=locate(other);
+    return {point,error:point?null:'Referenced waypoint has no valid position'};
+  }
   function locate(index:number):Point|null {
     if(status[index]===2)return points[index];
     if(status[index]===1){errors[index]='Circular waypoint reference';return null;}
@@ -54,40 +71,36 @@ export function resolveWaypointPositions(schedule:TrainSchedule):WaypointResolut
       p=parseGrid(stop.grid??'');
       if(!p)errors[index]='Select a grid for this waypoint';
     }else if(method==='relative'){
-      const ref=stop.relativeTo??'arrival';
-      let origin:Point|null=null;
-      if(ref==='arrival'){
-        origin=arrival;
-      }else{
-        const dep=map.get(ref);
-        if(dep===undefined)errors[index]='Reference waypoint not found';
-        else if(dep===index)errors[index]='A waypoint cannot reference itself';
-        else origin=locate(dep);
-      }
-      if(origin){
+      const resolved=getOrigin(stop.relativeTo??'arrival',index);
+      if(resolved.point){
         const bearing=stop.relativeBearing??NaN;
         const direction=stop.relativeDirection==='opposite'?'opposite':'bearing';
-        p=offsetPoint(origin,direction==='opposite'?(bearing+180)%360:bearing,
+        p=offsetPoint(resolved.point,direction==='opposite'?(bearing+180)%360:bearing,
           stop.relativeKm??NaN);
         if(!p)errors[index]='Check relative bearing / distance / map boundaries';
-      }else if(!errors[index]){
-        errors[index]='Referenced point has no valid position';
-      }
+      }else errors[index]=resolved.error??'Referenced point has no valid position';
     }else{
-      if(!arrival)errors[index]='Set the arrival / reference grid';
+      // Legacy route data has no routeReferenceId and thus uses arrival.
+      // Selecting another origin requires its OWN geometric offset.
+      const source=stop.routeReferenceId??'arrival';
+      const resolved=getOrigin(source,index);
+      if(!resolved.point)errors[index]=resolved.error??'Reference point is unresolved';
       else{
-        // Existing saved routes inherit their former global bearing/direction.
-        // A changed waypoint overrides only its own heading and side.
         const bearing=stop.routeBearing===undefined? schedule.railBearing : (stop.routeBearing??NaN);
         const direction=stop.routeDirection??schedule.approachSide;
+        const geometricKm=source==='arrival'
+          ?(stop.routeDistanceKm??stop.kmFromStation)
+          :stop.routeDistanceKm??NaN;
         if(!validBearing(bearing))errors[index]='Enter this waypoint\'s bearing (0–360°)';
         else if(direction!=='bearing'&&direction!=='opposite')
           errors[index]='Choose this waypoint\'s direction from reference';
+        else if(!Number.isFinite(geometricKm)||geometricKm<0)
+          errors[index]='Enter a distance from '+(source==='arrival'?'arrival': 'the selected origin');
         else{
-          // A computed entry point may be beyond the drawn map and enter later.
           const heading=direction==='opposite'?(bearing+180)%360:bearing;
-          p=offsetPoint(arrival,heading,stop.kmFromStation,true);
-          if(!p)errors[index]='Invalid distance from route reference';
+          // Calculated entry points may initially be outside the chart.
+          p=offsetPoint(resolved.point,heading,geometricKm,true);
+          if(!p)errors[index]='Invalid distance from selected origin';
         }
       }
     }

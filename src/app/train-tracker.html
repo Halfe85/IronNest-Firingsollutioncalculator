@@ -42,7 +42,38 @@
         }
       </div>
     </div>
-    <p class="train-note">Set each waypoint's bearing and direction inside its own editor. The arrival grid is shared; directions can differ between waypoints.</p>
+    <div class="route-extra-reference">
+      <div class="route-extra-heading">
+        <strong>REFERENCE / SPOTTER POINTS</strong>
+        <button type="button" class="train-reset" (click)="addReference()">+ REFERENCE</button>
+      </div>
+      @if(references().length){
+        <div class="route-reference-chips">
+          @for(ref of references();track ref.id){
+            <button type="button" [class.current]="editingReferenceId()===ref.id"
+              (click)="selectReference(ref.id)">{{ref.name}} · {{ref.grid||'GRID NOT SET'}}</button>
+          }
+        </div>
+      }
+      @if(editingReference();as ref){
+        <div class="route-reference-editor">
+          <div class="wp-editor-head">
+            <strong>EDIT REFERENCE</strong>
+            <button type="button" class="wp-delete" (click)="removeReference()">REMOVE</button>
+          </div>
+          <label class="train-field"><span>NAME (E.G. SPOTTER #1)</span>
+            <input type="text" maxlength="45" [value]="ref.name"
+              (input)="updateReferenceName($any($event.target).value)">
+          </label>
+          <app-grid-select [value]="editingReferenceGrid()"
+            (valueChange)="updateReferenceGrid($event)"></app-grid-select>
+          @if(!ref.grid){
+            <button type="button" class="train-reset" (click)="confirmReferenceGrid()">CONFIRM A1 0:0</button>
+          }
+        </div>
+      }
+    </div>
+    <p class="train-note">Add optional spotters or reference points only when a report names them. Each waypoint chooses its own bearing origin below.</p>
 
     <div class="speed-assisted-waypoints">
       <label class="train-field"><span>OPTIONAL CONSTANT SPEED · KM/H</span>
@@ -105,25 +136,24 @@
               }
             </div>
           }@else if(activeMethod()==='relative'){
-            <label class="train-field"><span>REFERENCE POINT</span>
+            <label class="train-field"><span>BEARING ORIGIN</span>
               <select [value]="selected.relativeTo||'arrival'" (change)="setRelativeSource($any($event.target).value)">
-                <option value="arrival">Route arrival / reference</option>
-                @for(wp of relativeSources();track wp.id){
-                  <option [value]="wp.id">{{wp.name}} · {{wp.grid??'calculated'}}</option>
+                @for(origin of originChoices();track origin.id){
+                  <option [value]="origin.id">{{origin.name}} · {{origin.grid||'UNRESOLVED'}}</option>
                 }
               </select>
             </label>
             <div class="wp-pair">
-              <label class="train-field"><span>BEARING FROM REFERENCE (°)</span>
+              <label class="train-field"><span>BEARING FROM {{activeOriginName()}} (°)</span>
                 <input type="text" inputmode="decimal" [value]="selected.relativeBearing??''"
                   (input)="setRelativeNumber('relativeBearing',$any($event.target).value)" placeholder="e.g. 180">
               </label>
-              <label class="train-field"><span>DISTANCE FROM REFERENCE (KM)</span>
+              <label class="train-field"><span>DISTANCE FROM {{activeOriginName()}} (KM)</span>
                 <input type="text" inputmode="decimal" [value]="selected.relativeKm??''"
                   (input)="setRelativeNumber('relativeKm',$any($event.target).value)" placeholder="e.g. 2.50">
               </label>
             </div>
-            <label class="train-field"><span>DIRECTION FROM REFERENCE</span>
+            <label class="train-field"><span>DIRECTION FROM {{activeOriginName()}}</span>
               <select [value]="selected.relativeDirection??'bearing'"
                 (change)="setRelativeDirection($any($event.target).value)">
                 <option value="bearing">Along entered bearing</option>
@@ -131,14 +161,22 @@
               </select>
             </label>
           }@else{
+            <label class="train-field"><span>BEARING ORIGIN</span>
+              <select [value]="selected.routeReferenceId??'arrival'"
+                (change)="setCalculatedOrigin($any($event.target).value)">
+                @for(origin of originChoices();track origin.id){
+                  <option [value]="origin.id">{{origin.name}} · {{origin.grid||'UNRESOLVED'}}</option>
+                }
+              </select>
+            </label>
             <div class="wp-pair">
-              <label class="train-field"><span>BEARING FROM ARRIVAL REFERENCE (°)</span>
+              <label class="train-field"><span>BEARING FROM {{activeOriginName()}} (°)</span>
                 <input type="text" inputmode="decimal"
                   [value]="selected.routeBearing===undefined?railBearing():selected.routeBearing??''"
                   (input)="setRouteBearing($any($event.target).value)"
                   placeholder="e.g. 90">
               </label>
-              <label class="train-field"><span>DIRECTION FROM REFERENCE</span>
+              <label class="train-field"><span>DIRECTION FROM {{activeOriginName()}}</span>
                 <select [value]="selected.routeDirection??approachSide()"
                   (change)="setRouteDirection($any($event.target).value)">
                   <option value="bearing">Along entered bearing</option>
@@ -146,14 +184,22 @@
                 </select>
               </label>
             </div>
-            <p class="train-note">This waypoint is placed independently from the arrival reference grid. Direction changes here affect only this waypoint.</p>
+            @if(activeOriginId()!=='arrival'){
+              <label class="train-field"><span>DISTANCE FROM {{activeOriginName()}} (KM)</span>
+                <input type="text" inputmode="decimal"
+                  [value]="selected.routeDistanceKm??''"
+                  (input)="setRouteDistance($any($event.target).value)"
+                  placeholder="e.g. 2.50">
+              </label>
+            }
+            <p class="train-note">Bearing, distance and direction are measured from the selected origin. Route distance below is for travel speed and timetable, not a substitute for this geometric offset.</p>
           }
         }@else{
           <p class="train-note">This is the route arrival point. Change its grid in the Reference / Arrival selector above.</p>
         }
         <div class="wp-pair">
           @if(!activeIsArrival()){
-            <label class="train-field"><span>REPORTED ROUTE DISTANCE (KM)</span>
+            <label class="train-field"><span>ROUTE DISTANCE TO ARRIVAL (KM)</span>
               <input type="text" inputmode="decimal" [value]="selected.kmFromStation"
                 (input)="setStopDistance(activeWaypointIndex(),$any($event.target).value)" placeholder="distance along route">
             </label>

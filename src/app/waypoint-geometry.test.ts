@@ -98,3 +98,62 @@ test('relative waypoint direction can be inverted without changing its reference
   ]};
   assert.equal(resolveWaypointPositions(route).grids[0],'N4 0:4');
 });
+
+test('calculated waypoint can measure bearing from a different waypoint',()=>{
+  const route:TrainSchedule={...base,stops:[
+    {...base.stops[0],routeReferenceId:'b',routeBearing:0,
+      routeDirection:'bearing',routeDistanceKm:2},
+    {...base.stops[1],method:'manual',grid:'N6 0:4'},
+    base.stops[2],base.stops[3]
+  ]};
+  const fixed=resolveWaypointPositions(route);
+  assert.equal(fixed.errors[0],null);
+  assert.equal(fixed.grids[0],'N8 0:4');
+  assert.equal(fixed.grids[1],'N6 0:4');
+  assert.equal(trainPositionAt(route,'10:10:10').ok,true);
+});
+test('calculated waypoint can use a named observer or reference point',()=>{
+  const route:TrainSchedule={
+    ...base,
+    references:[{id:'spotter-1',name:'Spotter #1',grid:'D4 5:5'},
+      {id:'ref-a',name:'Reference A',grid:'M5 0:4'}],
+    stops:[
+      {...base.stops[0],routeReferenceId:'ref:spotter-1',
+        routeBearing:90,routeDirection:'bearing',routeDistanceKm:3},
+      {...base.stops[1],routeReferenceId:'ref:ref-a',
+        routeBearing:180,routeDirection:'bearing',routeDistanceKm:2},
+      base.stops[2],base.stops[3]
+    ]
+  };
+  const resolved=resolveWaypointPositions(route);
+  assert.deepEqual(resolved.grids.slice(0,2),['G4 5:5','M3 0:4']);
+});
+test('missing named reference and missing geometric distance never silently use distance to arrival',()=>{
+  const route:TrainSchedule={...base,stops:[
+    {...base.stops[0],routeReferenceId:'ref:absent',
+      routeBearing:90,routeDistanceKm:3},
+    {...base.stops[1],routeReferenceId:'c',routeBearing:0,
+      routeDistanceKm:null},
+    base.stops[2],base.stops[3]
+  ]};
+  const r=resolveWaypointPositions(route);
+  assert.equal(r.points[0],null);
+  assert.match(r.errors[0]??'',/not found/i);
+  assert.equal(r.points[1],null);
+  assert.match(r.errors[1]??'',/distance/i);
+});
+test('calculated waypoints referencing each other are rejected as cycles',()=>{
+  const route:TrainSchedule={...base,stops:[
+    {...base.stops[0],routeReferenceId:'b',routeBearing:0,routeDistanceKm:2},
+    {...base.stops[1],routeReferenceId:'a',routeBearing:180,routeDistanceKm:2},
+    base.stops[2],base.stops[3]
+  ]};
+  const r=resolveWaypointPositions(route);
+  assert.equal(r.points[0],null);
+  assert.equal(r.points[1],null);
+  assert.equal(trainPositionAt(route,'10:10:10').ok,false);
+});
+test('old routes without reference ID remain measured from arrival reference',()=>{
+  const r=resolveWaypointPositions(base);
+  assert.deepEqual(r.grids,['P6 0:4','N6 0:4','L6 0:4','J6 0:4']);
+});

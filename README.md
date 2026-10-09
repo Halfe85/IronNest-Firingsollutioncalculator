@@ -185,3 +185,13 @@ Movement prediction interpolates between the positions of neighboring waypoints,
 ### Per-waypoint direction from reference
 
 Every calculated waypoint now has its own **Bearing from Arrival Reference** and **Direction from Reference** dropdown (along bearing or opposite +180°). Relative waypoints similarly have an independent direction toggle. The former route-wide Direction control was removed from the header. Manual/Observed waypoints do not need a direction because they use exact grid coordinates. Old locally saved routes retain their previous global bearing/direction as defaults until each waypoint is edited, and new routes require bearings entered per waypoint. The straight segments joining resulting positions can turn between waypoints. On mobile, direction and bearing stack inside the single expanded waypoint editor.
+
+### Explicit bearing origin for every waypoint (October 2026)
+
+Both **Calculated** and **Relative** waypoint methods now expose a **Bearing Origin** selector. Possible origins include the arrival reference, *any other waypoint*, or manually entered named reference/spotter points. When the origin changes, the bearing and direction labels show the chosen point's name: for example, **Bearing from Spotter #1** and **Direction from Spotter #1**. Each waypoint maintains its own source and heading.
+
+The Waypoint editor can add named references without restoring the previously removed Observation import dropdown. Each reference is a name and A–T/1–10/X/Y grid. Both active-route references and references within saved routes persist in browser local storage.
+
+**Two distances must not be confused:** when a calculated waypoint uses the arrival point as its source, its geometric distance defaults to the existing `kmFromStation` as before. When the origin is a different waypoint or named reference point, the user *must* supply **Distance from [origin] (km)**; `kmFromStation` remains the separate distance-to-arrival used for velocity/timetable calculations. This avoids silently using distances measured from the wrong point.
+
+References are tracked by stable IDs and circular waypoint reference chains are rejected; missing or invalid reference coordinates leave the calculation unresolved rather than producing a false firing solution. Legacy routes with no explicit source continue to use their original arrival reference.
