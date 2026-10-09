@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, effect, signal } from '@angular/core';
 import { COLUMNS, ROWS, parseGrid } from './map-math';
+import {EMPTY_GRID,gridInputFromText,gridInputLabel,type GridInput} from './graph-math';
+import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {fillWaypointTimes} from './route-timing';
 import {type Cannon,cannonOrUnassigned,normalizeShell} from './shot-options';
@@ -30,17 +32,28 @@ const MAP_LEFT=54,MAP_TOP=37,CELL=46;
 @Component({
   selector:'app-train-tracker',
   standalone:true,
-  imports:[CommonModule],
+  imports:[CommonModule,GridSelectComponent],
   templateUrl:'./train-tracker.html',
   styleUrl:'./train-tracker.css'
 })
 export class TrainTrackerComponent {
-  @Input() currentNestGrid:string|null=null;
+  private observationNestGrid:string|null=null;
+  @Input() set currentNestGrid(value:string|null){
+    // Observation owns Iron Nest's coordinate. Synchronize automatically when it changes.
+    this.observationNestGrid=value&&gridInputFromText(value)?value:null;
+    if(this.observationNestGrid)this.nestGrid.set(this.observationNestGrid);
+  }
+  get currentNestGrid():string|null{return this.observationNestGrid;}
+  @Output() nestGridChange=new EventEmitter<GridInput>();
   @Output() useSolution=new EventEmitter<MovingFireRequest>();
   readonly columns=COLUMNS;
   readonly rows=ROWS;
   readonly nestGrid=signal('');
   readonly stationGrid=signal('');
+  readonly nestGridSelection=computed<GridInput>(()=>
+    gridInputFromText(this.nestGrid())??{...EMPTY_GRID});
+  readonly referenceGridSelection=computed<GridInput>(()=>
+    gridInputFromText(this.stationGrid())??{...EMPTY_GRID});
   readonly railBearing=signal('');
   readonly approachSide=signal<'bearing'|'opposite'>('bearing');
   readonly stops=signal<TrainStop[]>(EMPTY_STOPS.map(s=>({...s})));
@@ -132,7 +145,10 @@ export class TrainTrackerComponent {
           targetLabel:string;routeName:string;routeSpeed:string;
           shell:string;cannon:Cannon;savedRoutes:SavedRoute[];}>|null;
       if(!state)return;
-      if(typeof state.nestGrid==='string')this.nestGrid.set(state.nestGrid);
+      // Legacy route storage is a fallback only when no Observation coordinate
+      // has been provided by the parent.
+      if(typeof state.nestGrid==='string'&&!this.observationNestGrid)
+        this.nestGrid.set(state.nestGrid);
       if(typeof state.stationGrid==='string')this.stationGrid.set(state.stationGrid);
       if(typeof state.railBearing==='string')this.railBearing.set(state.railBearing);
       if(state.approachSide==='bearing'||state.approachSide==='opposite')
@@ -170,10 +186,17 @@ export class TrainTrackerComponent {
   }
   setShell(value:string):void{if(SHELLS.some(s=>s===value))this.shell.set(value);}
   setCannon(value:string):void{const c=cannonOrUnassigned(value);if(c)this.cannon.set(c);}
-  useCurrentNest():void{
-    if(!this.currentNestGrid)return;
-    this.nestGrid.set(this.currentNestGrid);
-    this.notice.set('Iron Nest position synced from Normal Plotting.');
+  setWaypointNest(grid:GridInput):void{
+    const text=gridInputLabel(grid);
+    this.nestGrid.set(text);
+    this.nestGridChange.emit({...grid});
+    this.notice.set('Iron Nest grid updated in Observation and Waypoint.');
+  }
+  setWaypointReference(grid:GridInput):void{
+    this.stationGrid.set(gridInputLabel(grid));
+  }
+  confirmWaypointReference():void{
+    if(!this.stationGrid())this.stationGrid.set(gridInputLabel(this.referenceGridSelection()));
   }
   openRouteMap():void{this.routeMapOpen.set(true);}
   closeRouteMap():void{this.routeMapOpen.set(false);}
@@ -203,7 +226,8 @@ export class TrainTrackerComponent {
   }
   restoreRoute(id:string):void{
     const r=this.savedRoutes().find(v=>v.id===id);if(!r)return;
-    this.routeName.set(r.name);this.nestGrid.set(r.nestGrid);
+    this.routeName.set(r.name);
+    this.nestGrid.set(this.currentNestGrid??r.nestGrid);
     this.stationGrid.set(r.stationGrid);this.railBearing.set(r.railBearing);
     this.approachSide.set(r.approachSide);this.stops.set(r.stops.map(s=>({...s})));
     this.targetLabel.set(r.targetLabel);this.shell.set(normalizeShell(r.shell));

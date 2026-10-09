@@ -59,6 +59,7 @@
 </div>
 } @else {
   <app-train-tracker [currentNestGrid]="nestGridText()"
+    (nestGridChange)="setNestGrid($event)"
     (useSolution)="useMovingSolution($event)"></app-train-tracker>
 }
 

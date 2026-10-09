@@ -163,3 +163,9 @@ Pressing **X** on a solution card opens a grid correction modal. Two distinct re
 - **Shell impact**: the new grid is where a previously aimed shell landed. Apply a first-order vector correction to the previous aiming coordinate, using `newAim = oldAim + intendedTarget - observedImpact`. This can correct both overshoot and lateral bearing error but has not yet been calibrated for dispersion.
   
 The original intended target coordinates are preserved for repeated impact corrections; revisions are retained locally for audit (up to 30). Historical saved shots that lacked a Nest origin require the player to enter one before receiving a grid correction. A solution that would leave the map or valid game firing range is rejected instead of inventing coordinates.
+
+### Shared Observation / Waypoint coordinate inputs
+
+Waypoint now reuses the **same four-dropdown GridSelect component** already used in Observation for Iron Nest and the route reference / arrival grid: **A–T**, **1–10**, **X 0–9**, **Y 0–9**. The Iron Nest coordinate is inherited from Observation automatically. Editing it in Waypoint emits a change back to the Observation graph; it remains one shared map position across both modes, not two unrelated copies. The route reference remains a manual four-field entry: the removed `Use resolved normal-plot reference` dropdown is not restored. Existing locally saved route reference coordinates are preserved, and a route loaded later uses the current Observation Iron Nest position (rather than silently substituting its historical origin). The route reference stays unset until a dropdown is changed or the explicit A1 0:0 confirmation is used.
+
+This applies to mobile as well: the two coordinate groups stack vertically on narrow screens. Waypoint math still uses the exact same grid parse format `C2 5:6` behind the selector.

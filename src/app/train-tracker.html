@@ -22,13 +22,27 @@
         </select>
       </label>
     }
-    <div class="route-nest-sync">
-      <span>Coordinates below can be entered manually or copied from Normal Plotting.</span>
-      @if(currentNestGrid){<button type="button" class="train-reset" (click)="useCurrentNest()">SYNC NEST</button>}
+    <div class="waypoint-grid-entries">
+      <div class="waypoint-grid-card">
+        <div class="waypoint-grid-head">
+          <strong>IRON NEST</strong>
+          <span>SHARED WITH OBSERVATION · {{nestGrid() || 'NOT SET'}}</span>
+        </div>
+        <app-grid-select [value]="nestGridSelection()" (valueChange)="setWaypointNest($event)"></app-grid-select>
+        <small>Changing Iron Nest here updates Observation automatically.</small>
+      </div>
+      <div class="waypoint-grid-card">
+        <div class="waypoint-grid-head">
+          <strong>ROUTE REFERENCE / ARRIVAL GRID</strong>
+          <span>{{stationGrid() || 'NOT SET'}}</span>
+        </div>
+        <app-grid-select [value]="referenceGridSelection()" (valueChange)="setWaypointReference($event)"></app-grid-select>
+        @if(!stationGrid()){
+          <button class="train-reset" type="button" (click)="confirmWaypointReference()">USE A1 0:0</button>
+        }
+      </div>
     </div>
-    <div class="location-grid">
-      <label><span>IRON NEST POSITION</span><input type="text" [value]="nestGrid()" (input)="nestGrid.set($any($event.target).value)" placeholder="e.g. C2 5:6"></label>
-      <label><span>ROUTE REFERENCE / ARRIVAL GRID</span><input type="text" [value]="stationGrid()" (input)="stationGrid.set($any($event.target).value)" placeholder="e.g. J6 0:4"></label>
+    <div class="location-grid waypoint-direction">
       <label><span>ROUTE BEARING FROM REFERENCE (°)</span><input type="text" inputmode="decimal" [value]="railBearing()" (input)="railBearing.set($any($event.target).value)" placeholder="e.g. 90"></label>
       <label><span>DIRECTION FROM REFERENCE</span><select [value]="approachSide()" (change)="approachSide.set($any($event.target).value)">
           <option value="bearing">Along entered bearing</option><option value="opposite">Opposite the bearing</option>
