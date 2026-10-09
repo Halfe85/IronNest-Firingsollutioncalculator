@@ -21,11 +21,11 @@ export function methodOf(s:RoutedStop):WaypointMethod{
 export function validBearing(deg:number):boolean {
   return Number.isFinite(deg)&&deg>=0&&deg<=360;
 }
-export function offsetPoint(origin:Point,bearing:number,km:number):Point|null{
+export function offsetPoint(origin:Point,bearing:number,km:number,allowOffMap=false):Point|null{
   if(!validBearing(bearing)||!Number.isFinite(km)||km<0)return null;
   const r=bearing*Math.PI/180;
   const p={x:origin.x+Math.sin(r)*km,y:origin.y+Math.cos(r)*km};
-  return onMap(p)?p:null;
+  return allowOffMap||onMap(p)?p:null;
 }
 /**
  * Geometry resolution is separate from the clock. Thus grid markers render even
@@ -77,7 +77,9 @@ export function resolveWaypointPositions(schedule:TrainSchedule):WaypointResolut
       else if(!validBearing(schedule.railBearing))
         errors[index]='Set the route bearing (0–360°)';
       else{
-        p=offsetPoint(arrival,railBearing,stop.kmFromStation);
+        // The train can begin beyond the drawn map and enter later.
+        // Only grid reports (manual/observed) must always be on-map.
+        p=offsetPoint(arrival,railBearing,stop.kmFromStation,true);
         if(!p)errors[index]='Derived position is outside the map or distance is invalid';
       }
     }
