@@ -240,6 +240,19 @@ export class TrainTrackerComponent {
         this.editingReferenceId.set(state.editingReferenceId);
     }finally{this.hydrated.set(true);}
   }
+  ngOnDestroy():void{
+    // Tab switches can happen in the same change-detection turn as a form edit.
+    if(this.hydrated())void sessionDb.write('waypoint',{
+      nestGrid:this.nestGrid(),stationGrid:this.stationGrid(),
+      railBearing:this.railBearing(),approachSide:this.approachSide(),
+      stops:this.stops(),impactMode:this.impactMode(),
+      customImpactClock:this.customImpactClock(),flightSeconds:this.flightSeconds(),
+      targetLabel:this.targetLabel(),routeName:this.routeName(),routeSpeed:this.routeSpeed(),
+      shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes(),
+      references:this.references(),editingStopId:this.editingStopId(),
+      editingReferenceId:this.editingReferenceId()
+    });
+  }
   x(x:number):number{return MAP_LEFT+x*CELL;}
   y(y:number):number{return MAP_TOP+(10-y)*CELL;}
   setStopTime(index:number,value:string):void{

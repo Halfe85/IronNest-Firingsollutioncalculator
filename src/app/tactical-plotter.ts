@@ -119,6 +119,13 @@ export class TacticalPlotterComponent{
       }
     }finally{this.hydrated.set(true);}
   }
+  ngOnDestroy():void{
+    // Flush the last modal edit before Angular destroys this tab's component.
+    if(this.hydrated())void sessionDb.write('plotter',{
+      nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
+      plottingMode:this.plottingMode()
+    });
+  }
   @HostListener('document:keydown.escape')
   closeModal():void{
     this.modal.set(null);this.activeId.set(null);this.observationMapVisible.set(false);
