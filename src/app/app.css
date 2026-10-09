@@ -116,3 +116,12 @@
 .grid-preview strong{color:#f5d8a5;font-size:19px;white-space:nowrap}
 .modal-actions .confirm:disabled{opacity:.35}
 @media(max-width:520px){.shot-grid-details strong{font-size:11px}.grid-preview strong{font-size:17px}}
+
+.report-bearing-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:9px;margin:10px 0;align-items:end}
+.report-bearing-inputs .miss-input-label{min-width:0}
+.report-bearing-inputs input{min-width:0}
+.app-dialog{box-sizing:border-box;max-width:calc(100vw - 16px);
+ max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ overscroll-behavior:contain}
+@media(max-width:440px){.report-bearing-inputs{grid-template-columns:1fr}}

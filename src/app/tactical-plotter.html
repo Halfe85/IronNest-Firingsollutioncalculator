@@ -59,13 +59,14 @@
 </div>
 } @else {
   <app-train-tracker [currentNestGrid]="nestGridText()"
+    (clearFiringSolutions)="clearFiringSolutions.emit()"
     (nestGridChange)="setNestGrid($event)"
     (useSolution)="useMovingSolution($event)"></app-train-tracker>
 }
 
 @if(modal()==='node'){
   <div class="plot-overlay" (click)="closeModal()" role="presentation">
-    <section class="plot-dialog" role="dialog" aria-modal="true" aria-label="Point information" (click)="$event.stopPropagation()">
+    <section class="plot-dialog point-dialog" role="dialog" aria-modal="true" aria-label="Point information" (click)="$event.stopPropagation()">
       <header class="dialog-heading">
         <div><span class="micro-label">POINT DETAILS</span><h2>{{ active()?.name }}</h2></div>
         <button type="button" class="close-x" (click)="closeModal()" aria-label="Close point details">×</button>

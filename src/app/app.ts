@@ -7,6 +7,7 @@ import {bearingDegrees,distanceKm,formatGrid,onMap,parseGrid,type Point} from '.
 import {projectImpact,correctFromImpact} from './impact-correction';
 import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
+import {sessionDb} from './session-db';
 
 type Tab='calc'|'plot'|'shots';
 type ShotState='pending'|'hit'|'miss';
@@ -14,6 +15,7 @@ type GridCorrectionMode='target'|'impact';
 interface ShotRevision {
   oldBearing:number;oldDistanceKm:number;oldCharges:number;oldElevation:number;
   reportedGrid:string;kind:GridCorrectionMode;changedAt:string;
+  reportedBearing?:number;reportedDistanceKm?:number;
 }
 interface ShotCard{
   id:string;label:string;createdAt:string;shell:string; bearing:number;
@@ -27,8 +29,6 @@ interface ShotCard{
   lastReport?:{grid:string;kind:GridCorrectionMode}|null;
   state:ShotState;missKm:number|null;
 }
-const STORE='iron-nest-shots-v2';
-const OLD_STORE='iron-nest-fcc-v1';
 function uid():string {
   return typeof crypto!=='undefined'&&'randomUUID' in crypto?
     crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -59,17 +59,32 @@ export class AppComponent {
   readonly predictedGrid=computed(()=>this.predictedTarget()
     ?formatGrid(this.predictedTarget()!):null);
   readonly shots=signal<ShotCard[]>([]);
+  readonly hydrated=signal(false);
   readonly activeShotId=signal<string|null>(null);
   readonly modal=signal<'about'|'miss'|null>(null);
   readonly reportGrid=signal<GridInput>({...EMPTY_GRID});
   readonly reportMode=signal<GridCorrectionMode>('target');
+  readonly targetInputMode=signal<'grid'|'bearing'>('grid');
+  readonly targetBearing=signal('');
+  readonly targetRange=signal('');
+  readonly targetBearingValue=computed(()=>{
+    const input=this.targetBearing().trim().replace(',','.');
+    return input===''?NaN:Number(input);
+  });
+  readonly targetRangeValue=computed(()=>{
+    const input=this.targetRange().trim().replace(',','.');
+    return input===''?NaN:Number(input);
+  });
   readonly reportNestGrid=signal<GridInput>({...EMPTY_GRID});
   readonly reportNestConfirmed=signal(false);
   readonly reportPreview=computed(()=>{
     const shot=this.missShot();
     const nest=shot?.nestPosition??(this.reportNestConfirmed()?gridInputToPoint(this.reportNestGrid()):null);
-    const observed=gridInputToPoint(this.reportGrid());
-    if(!shot||!nest||!observed)return null;
+    if(!shot||!nest)return null;
+    const observed=this.reportMode()==='target'&&this.targetInputMode()==='bearing'
+      ?projectImpact(nest,this.targetBearingValue(),this.targetRangeValue())
+      :gridInputToPoint(this.reportGrid());
+    if(!observed)return null;
     const originalTarget=shot.targetPosition??projectImpact(nest,shot.bearing,shot.distanceKm);
     const oldAim=shot.aimPosition??originalTarget;
     if(!originalTarget||!oldAim)return null;
@@ -138,46 +153,52 @@ export class AppComponent {
     this.reportNestGrid.set(value);this.reportNestConfirmed.set(true);
   }
   constructor(){
-    this.restore();
-    effect(()=>{try{localStorage.setItem(STORE,JSON.stringify({
-      shots:this.shots(),activeShotId:this.activeShotId(),nestGrid:this.nestGrid(),nestConfirmed:this.nestConfirmed()
-    }));}catch{/* storage unavailable */}});
+    void this.restore();
+    effect(()=>{
+      if(!this.hydrated())return;
+      void sessionDb.write('firing',{
+        shots:this.shots(),activeShotId:this.activeShotId(),
+        label:this.label(),bearing:this.bearing(),distance:this.distance(),
+        shell:this.shell(),cannon:this.cannon(),chargeMode:this.chargeMode(),
+        nestGrid:this.nestGrid(),nestConfirmed:this.nestConfirmed()
+      });
+    });
   }
-  private restore():void{
+  private async restore():Promise<void>{
     try{
-      const raw=localStorage.getItem(STORE);
-      if(raw){
-        const data=JSON.parse(raw) as {shots?:ShotCard[];activeShotId?:string;nestGrid?:GridInput;nestConfirmed?:boolean};
-        if(data.nestGrid&&gridInputToPoint(data.nestGrid))this.nestGrid.set(data.nestGrid);
-        if(data.nestConfirmed===true)this.nestConfirmed.set(true);
-        if(Array.isArray(data.shots)){
-          this.shots.set(data.shots.filter(s=>s&&typeof s.id==='string'&&
-            Number.isFinite(s.distanceKm)&&Number.isFinite(s.elevation)&&
-            ['pending','hit','miss'].includes(s.state)).slice(0,200).map(s=>({
-              ...s, shell:normalizeShell(s.shell),
-              // Existing shots were created before cannon assignment existed.
-              cannon:cannonOrUnassigned(s.cannon)
-              ,
-              // Historical shots may not have location tracking metadata.
-              nestPosition:s.nestPosition&&onMap(s.nestPosition)?s.nestPosition:null,
-              targetPosition:s.targetPosition&&onMap(s.targetPosition)?s.targetPosition:null,
-              aimPosition:s.aimPosition&&onMap(s.aimPosition)?s.aimPosition:null,
-              revisions:Array.isArray(s.revisions)?s.revisions.slice(-30):[],
-              lastReport:s.lastReport??null
-            })));
-        }
-        if(typeof data.activeShotId==='string')this.activeShotId.set(data.activeShotId);
-        return;
+      const data=await sessionDb.read<{
+        shots?:ShotCard[];activeShotId?:string;nestGrid?:GridInput;nestConfirmed?:boolean;
+        label?:string;bearing?:string;distance?:string;shell?:string;cannon?:Cannon;
+        chargeMode?:number;
+      }>('firing');
+      if(!data)return;
+      if(data.nestGrid&&gridInputToPoint(data.nestGrid))this.nestGrid.set(data.nestGrid);
+      if(data.nestConfirmed===true)this.nestConfirmed.set(true);
+      if(typeof data.label==='string')this.label.set(data.label.slice(0,60));
+      if(typeof data.bearing==='string')this.bearing.set(data.bearing);
+      if(typeof data.distance==='string')this.distance.set(data.distance);
+      if(typeof data.shell==='string')this.shell.set(normalizeShell(data.shell));
+      if(data.cannon==='left'||data.cannon==='right')this.cannon.set(data.cannon);
+      if(typeof data.chargeMode==='number')this.chargeMode.set(data.chargeMode);
+      if(Array.isArray(data.shots)){
+        this.shots.set(data.shots.filter(s=>s&&typeof s.id==='string'&&
+          Number.isFinite(s.distanceKm)&&Number.isFinite(s.elevation)&&
+          ['pending','hit','miss'].includes(s.state)).slice(0,200).map(s=>({
+            ...s,shell:normalizeShell(s.shell),cannon:cannonOrUnassigned(s.cannon),
+            nestPosition:s.nestPosition&&onMap(s.nestPosition)?s.nestPosition:null,
+            targetPosition:s.targetPosition&&onMap(s.targetPosition)?s.targetPosition:null,
+            aimPosition:s.aimPosition&&onMap(s.aimPosition)?s.aimPosition:null,
+            revisions:Array.isArray(s.revisions)?s.revisions.slice(-30):[],
+            lastReport:s.lastReport??null
+          })));
       }
-      const old=JSON.parse(localStorage.getItem(OLD_STORE)??'null') as
-        {shots?:Array<{id:string;target:string;createdAt:string;shell:string;
-          bearing:number;distanceKm:number;charge:number;elevation:number}>}|null;
-      if(old&&Array.isArray(old.shots))this.shots.set(old.shots.slice(0,200).map(s=>({
-        id:s.id,label:s.target,createdAt:s.createdAt,shell:s.shell,
-        bearing:s.bearing,distanceKm:s.distanceKm,charges:s.charge,
-        elevation:s.elevation,cannon:null,state:'pending',missKm:null
-      })));
-    }catch{/* corrupted data */ }
+      if(typeof data.activeShotId==='string'&&
+        this.shots().some(s=>s.id===data.activeShotId))this.activeShotId.set(data.activeShotId);
+    }finally{this.hydrated.set(true);}
+  }
+  clearFiringSolutions():void{
+    this.shots.set([]);this.activeShotId.set(null);
+    this.selectedMissShot.set(null);this.modal.set(null);this.error.set('');
   }
   @HostListener('document:keydown.escape')
   closeModal():void{this.modal.set(null);this.selectedMissShot.set(null);}
@@ -238,7 +259,9 @@ export class AppComponent {
     const shot=this.shots().find(s=>s.id===id);
     if(!shot)return;
     this.selectedMissShot.set(id);this.activeShotId.set(id);
-    this.reportMode.set('target');
+    this.reportMode.set('target');this.targetInputMode.set('grid');
+    this.targetBearing.set(shot.bearing.toFixed(2));
+    this.targetRange.set(shot.distanceKm.toFixed(3));
     const current=shot.targetPosition??(shot.nestPosition?
       projectImpact(shot.nestPosition,shot.bearing,shot.distanceKm):null);
     const grid=current?formatGrid(current):null;
@@ -251,16 +274,24 @@ export class AppComponent {
   setReportMode(mode:string):void{
     if(mode==='target'||mode==='impact')this.reportMode.set(mode);
   }
+  setTargetInputMode(mode:string):void{
+    if(mode==='grid'||mode==='bearing')this.targetInputMode.set(mode);
+  }
   saveMiss():void{
     const original=this.missShot(),preview=this.reportPreview();
     if(!original||!preview){this.error.set('Check the Iron Nest and reported grid.');return;}
     const origin=original.nestPosition??(this.reportNestConfirmed()?
       gridInputToPoint(this.reportNestGrid()):null);
     if(!origin){this.error.set('Enter the Iron Nest position for this older shot.');return;}
+    const reportedGrid=this.reportMode()==='target'&&this.targetInputMode()==='bearing'
+      ?preview.grid??'':gridInputLabel(this.reportGrid());
     const revision:ShotRevision={
       oldBearing:original.bearing,oldDistanceKm:original.distanceKm,
       oldCharges:original.charges,oldElevation:original.elevation,
-      reportedGrid:gridInputLabel(this.reportGrid()),kind:this.reportMode(),
+      reportedGrid,kind:this.reportMode(),
+      ...(this.reportMode()==='target'&&this.targetInputMode()==='bearing'
+        ?{reportedBearing:this.targetBearingValue(),reportedDistanceKm:this.targetRangeValue()}
+        :{}),
       changedAt:new Date().toISOString()
     };
     this.shots.update(rows=>rows.map(s=>s.id===original.id?{
@@ -268,7 +299,7 @@ export class AppComponent {
       charges:preview.charges,elevation:preview.elevation,
       nestPosition:origin,targetPosition:preview.targetPosition,
       aimPosition:preview.aimPosition,
-      lastReport:{grid:gridInputLabel(this.reportGrid()),kind:this.reportMode()},
+      lastReport:{grid:reportedGrid,kind:this.reportMode()},
       revisions:[...(s.revisions??[]),revision].slice(-30),
       state:'pending' as ShotState,missKm:null
     }:s));

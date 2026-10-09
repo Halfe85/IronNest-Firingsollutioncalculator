@@ -10,9 +10,9 @@ import {
 import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
+import {sessionDb} from './session-db';
 
 export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon;}
-const STORAGE='iron-nest-plot-graph-v1';
 function clone(src:readonly IntelNode[]):IntelNode[]{
   return src.map(n=>({...n,grid:n.grid?{...n.grid}:undefined,
     reports:n.reports.map(r=>({...r}))}));
@@ -27,6 +27,8 @@ function uid():string{
 })
 export class TacticalPlotterComponent{
   @Output() fireSolution=new EventEmitter<PlotFireRequest>();
+  @Output() clearFiringSolutions=new EventEmitter<void>();
+  readonly hydrated=signal(false);
   readonly nodes=signal<IntelNode[]>([{
     id:'nest',name:'Iron Nest',role:'nest',grid:{letter:'A',column:1,x:0,y:0},reports:[]
   }]);
@@ -84,28 +86,38 @@ export class TacticalPlotterComponent{
     });
   });
   constructor(){
+    void this.restore();
+    effect(()=>{
+      if(!this.hydrated())return;
+      void sessionDb.write('plotter',{
+        nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
+        plottingMode:this.plottingMode()
+      });
+    });
+  }
+  private async restore():Promise<void>{
     try{
-      const data=JSON.parse(localStorage.getItem(STORAGE)??'null') as
-        {nodes?:unknown;targetLoadouts?:unknown;plottingMode?:unknown}|null;
-      if(data&&data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
-      if(data&&Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
-        data.nodes.every((n:IntelNode)=>n&&typeof n.id==='string'&&
-        typeof n.name==='string'&&['nest','spotter','reference','target'].includes(n.role)&&
-        Array.isArray(n.reports)&&n.reports.length<=20))this.nodes.set(clone(data.nodes));
-      if(data&&data.targetLoadouts&&typeof data.targetLoadouts==='object'&&!Array.isArray(data.targetLoadouts)){
+      const data=await sessionDb.read<{
+        nodes?:IntelNode[];targetLoadouts?:Record<string,{shell?:unknown;cannon?:unknown}>;
+        plottingMode?:'normal'|'waypoint';
+      }>('plotter');
+      if(!data)return;
+      if(data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
+      if(Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
+        data.nodes.every(n=>n&&typeof n.id==='string'&&
+          typeof n.name==='string'&&['nest','spotter','reference','target'].includes(n.role)&&
+          Array.isArray(n.reports)&&n.reports.length<=20))this.nodes.set(clone(data.nodes));
+      if(data.targetLoadouts&&typeof data.targetLoadouts==='object'){
         const known=new Set(this.nodes().map(n=>n.id));
-        const input=data.targetLoadouts as Record<string,{shell?:unknown;cannon?:unknown}>;
         const cleaned:Record<string,{shell:string;cannon:Cannon}>={};
-        for(const [id,item] of Object.entries(input)){
-          if(known.has(id)&&item&&typeof item==='object'){
-            cleaned[id]={shell:normalizeShell(item.shell),cannon:cannonOrUnassigned(item.cannon)??'left'};
-          }
+        for(const [id,item] of Object.entries(data.targetLoadouts)){
+          if(known.has(id)&&item&&typeof item==='object')
+            cleaned[id]={shell:normalizeShell(item.shell),
+              cannon:cannonOrUnassigned(item.cannon)??'left'};
         }
         this.targetLoadouts.set(cleaned);
       }
-    }catch { /* missing or corrupted local data */ }
-    effect(()=>{try{localStorage.setItem(STORAGE,
-      JSON.stringify({nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),plottingMode:this.plottingMode()}));}catch{/* storage blocked */}});
+    }finally{this.hydrated.set(true);}
   }
   @HostListener('document:keydown.escape')
   closeModal():void{
@@ -132,6 +144,9 @@ export class TacticalPlotterComponent{
   }
   newMission():void{
     if(!window.confirm('Start a new mission and replace the current locally saved plot?'))return;
+    this.clearFiringSolutions.emit();
+    void sessionDb.clear('waypoint');
+    this.plottingMode.set('normal');
     this.targetLoadouts.set({});
     this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',
       grid:{letter:'A',column:1,x:0,y:0},reports:[]}]);

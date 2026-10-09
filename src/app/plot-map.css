@@ -6,3 +6,4 @@
 .observation-circle{fill:#85aedb;fill-opacity:.045;stroke:#8cbddd;stroke-width:2;stroke-dasharray:6 4}
 .observation-line{stroke:#f4c17b;stroke-width:2;stroke-dasharray:7 4}
 .observation-sector{fill:#f4bf7b;fill-opacity:.10;stroke:#c59c63;stroke-width:1}
+:host{display:block;min-width:0;max-width:100%}

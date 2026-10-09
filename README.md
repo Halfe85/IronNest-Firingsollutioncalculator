@@ -195,3 +195,11 @@ The Waypoint editor can add named references without restoring the previously re
 **Two distances must not be confused:** when a calculated waypoint uses the arrival point as its source, its geometric distance defaults to the existing `kmFromStation` as before. When the origin is a different waypoint or named reference point, the user *must* supply **Distance from [origin] (km)**; `kmFromStation` remains the separate distance-to-arrival used for velocity/timetable calculations. This avoids silently using distances measured from the wrong point.
 
 References are tracked by stable IDs and circular waypoint reference chains are rejected; missing or invalid reference coordinates leave the calculation unresolved rather than producing a false firing solution. Legacy routes with no explicit source continue to use their original arrival reference.
+
+### Session-scoped IndexedDB (October 2026)
+
+All editable firing-card data, calculator inputs, Observation graph and target reports, modal loadouts, Waypoint route editor inputs and saved routes are now auto-saved to a shared IndexedDB database. **No app data is written to localStorage**. A tab-scoped session token is kept in `sessionStorage` solely to distinguish browser sessions, while the actual data are in IndexedDB. A page refresh and switching tabs preserve entries and modal edits. A fresh session clears IndexedDB before any old entries are read. Closing the last browser window cannot be detected reliably enough to guarantee immediate erasure; some browsers also restore sessionStorage with reopened tabs. For highly sensitive data, clear the browser's site storage.
+
+Tactical Plotter's New/Clear also clears the Fire Solutions cards and Waypoint state. Waypoint's New Route clears the firing-card list for the new operation. The X button on a Fire Solution card supports updating the intended target by **grid coordinates** or **bearing + distance from its Iron Nest**; the observed-shell-impact correction remains a distinct mode. Corrections update the existing tile and keep an audit of the former values.
+
+The map preview inside reference/target dialogs is deliberately small (scrollable viewport 95–175 px depending on available height). Modal dimensions are constrained by the dynamic mobile viewport, and long content scrolls inside the modal rather than overflowing the phone screen.

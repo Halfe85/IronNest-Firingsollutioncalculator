@@ -86,3 +86,24 @@
 .plot-quick-actions button{border:1px solid #576c52;background:#27362a;color:#e0eacb;border-radius:5px;min-height:41px;padding:8px 12px;font-size:11px;font-weight:800}
 .plot-quick-actions .map-launch{border-color:#c29c5d;background:#55492c;color:#ffe2b5}
 @media(max-width:430px){.plot-mode-selector label{grid-template-columns:1fr;gap:5px}.plot-quick-actions button{flex:1}}
+
+/* Every modal stays inside the visual viewport, including narrow phones and short screens. */
+.plot-overlay{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overflow:hidden}
+.plot-dialog{box-sizing:border-box;min-width:0;max-width:calc(100vw - 16px);
+ max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ overscroll-behavior:contain;overflow-x:hidden;overflow-y:auto}
+.plot-dialog.point-dialog{width:min(600px,calc(100vw - 16px))}
+.dialog-heading{position:sticky;top:-15px;z-index:5;background:#1b2720;padding:5px 0}
+.observation-map-panel{max-width:100%;min-width:0;padding:6px}
+.observation-map-panel .map-viewport{max-height:min(175px,24dvh);overflow:auto}
+.observation-map-panel .plot-svg{min-width:440px;width:100%;height:auto}
+.map-dialog .map-viewport{max-height:min(68dvh,620px);overflow:auto}
+@media(max-width:520px){
+ .plot-dialog.point-dialog{padding:9px}
+ .dialog-heading{top:-9px}
+ .observation-map-panel .map-viewport{max-height:min(130px,20dvh)}
+ .observation-map-panel .plot-svg{min-width:380px}
+ .map-preview-actions{font-size:10px}
+ .map-preview-actions button{min-height:35px}
+}
+@media(max-height:540px){.observation-map-panel .map-viewport{max-height:95px}}

@@ -7,14 +7,13 @@ import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {fillWaypointTimes} from './route-timing';
 import {type Cannon,cannonOrUnassigned,normalizeShell} from './shot-options';
+import {sessionDb} from './session-db';
 import { calculateFireTime, elevationAt, estimatedFlightSeconds, selectCharge } from './firing';
 import {
   clockSeconds, trainPositionAt, validateSchedule, waypointSpeeds,
   type TrainSchedule, type TrainStop, type NamedRouteReference
 } from './train-math';
 
-const STORAGE_KEY='iron-nest-train-v2';
-const LEGACY_KEY='iron-nest-train-v1';
 export interface MovingFireRequest {
   bearing:number;distanceKm:number;target:string;impactClock:string;
   flightSeconds:string;grid:string|null;nestGrid:string;shell:string;cannon:Cannon;
@@ -47,6 +46,8 @@ export class TrainTrackerComponent {
   get currentNestGrid():string|null{return this.observationNestGrid;}
   @Output() nestGridChange=new EventEmitter<GridInput>();
   @Output() useSolution=new EventEmitter<MovingFireRequest>();
+  @Output() clearFiringSolutions=new EventEmitter<void>();
+  readonly hydrated=signal(false);
   readonly columns=COLUMNS;
   readonly rows=ROWS;
   readonly nestGrid=signal('');
@@ -178,29 +179,33 @@ export class TrainTrackerComponent {
     });
   }
   constructor(){
-    this.restore();
+    void this.restore();
     effect(()=>{
-      try{localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      if(!this.hydrated())return;
+      void sessionDb.write('waypoint',{
         nestGrid:this.nestGrid(),stationGrid:this.stationGrid(),
         railBearing:this.railBearing(),approachSide:this.approachSide(),
         stops:this.stops(),impactMode:this.impactMode(),
         customImpactClock:this.customImpactClock(),flightSeconds:this.flightSeconds(),
         targetLabel:this.targetLabel(),routeName:this.routeName(),routeSpeed:this.routeSpeed(),
-        shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes(),references:this.references()
-      }));}catch{ /* storage disabled */ }
+        shell:this.shell(),cannon:this.cannon(),savedRoutes:this.savedRoutes(),
+        references:this.references(),editingStopId:this.editingStopId(),
+        editingReferenceId:this.editingReferenceId()
+      });
     });
   }
-  private restore():void{
+  private async restore():Promise<void>{
     try{
-      const state=JSON.parse(localStorage.getItem(STORAGE_KEY)??localStorage.getItem(LEGACY_KEY)??'null') as
-        Partial<{nestGrid:string;stationGrid:string;railBearing:string;
-          approachSide:'bearing'|'opposite';stops:TrainStop[];
-          impactMode:string;customImpactClock:string;flightSeconds:string;
-          targetLabel:string;routeName:string;routeSpeed:string;
-          shell:string;cannon:Cannon;savedRoutes:SavedRoute[];references:NamedRouteReference[];}>|null;
+      const state=await sessionDb.read<Partial<{
+        nestGrid:string;stationGrid:string;railBearing:string;
+        approachSide:'bearing'|'opposite';stops:TrainStop[];
+        impactMode:string;customImpactClock:string;flightSeconds:string;
+        targetLabel:string;routeName:string;routeSpeed:string;
+        shell:string;cannon:Cannon;savedRoutes:SavedRoute[];
+        references:NamedRouteReference[];
+        editingStopId:string|null;editingReferenceId:string|null;
+      }>>('waypoint');
       if(!state)return;
-      // Legacy route storage is a fallback only when no Observation coordinate
-      // has been provided by the parent.
       if(typeof state.nestGrid==='string'&&!this.observationNestGrid)
         this.nestGrid.set(state.nestGrid);
       if(typeof state.stationGrid==='string')this.stationGrid.set(state.stationGrid);
@@ -215,7 +220,9 @@ export class TrainTrackerComponent {
           typeof s.time==='string'&&typeof s.kmFromStation==='number'))
         this.stops.set(this.normalizeStops(state.stops));
       const current=this.stops()[0]?.id??null;
-      this.editingStopId.set(current);
+      const selected=state.editingStopId;
+      this.editingStopId.set(typeof selected==='string'&&
+        this.stops().some(x=>x.id===selected)?selected:current);
       if(typeof state.impactMode==='string')this.impactMode.set(state.impactMode);
       if(typeof state.customImpactClock==='string')this.customImpactClock.set(state.customImpactClock);
       if(typeof state.flightSeconds==='string')this.flightSeconds.set(state.flightSeconds);
@@ -227,9 +234,11 @@ export class TrainTrackerComponent {
       if(Array.isArray(state.savedRoutes))this.savedRoutes.set(state.savedRoutes.filter(r=>
         r&&typeof r.id==='string'&&typeof r.name==='string'&&
         typeof r.nestGrid==='string'&&typeof r.stationGrid==='string'&&
-        Array.isArray(r.stops)&&r.stops.length>=2&&r.stops.length<=12
-      ).slice(0,25));
-    }catch{ /* bad state ignored */ }
+        Array.isArray(r.stops)&&r.stops.length>=2&&r.stops.length<=12).slice(0,25));
+      if(typeof state.editingReferenceId==='string'&&
+        this.references().some(x=>x.id===state.editingReferenceId))
+        this.editingReferenceId.set(state.editingReferenceId);
+    }finally{this.hydrated.set(true);}
   }
   x(x:number):number{return MAP_LEFT+x*CELL;}
   y(y:number):number{return MAP_TOP+(10-y)*CELL;}
@@ -366,6 +375,7 @@ export class TrainTrackerComponent {
   openRouteMap():void{this.routeMapOpen.set(true);}
   closeRouteMap():void{this.routeMapOpen.set(false);}
   newRoute():void{
+    this.clearFiringSolutions.emit();
     this.routeName.set('New route');this.routeSpeed.set('');
     this.stationGrid.set('');this.references.set([]);
     this.editingReferenceId.set(null);
