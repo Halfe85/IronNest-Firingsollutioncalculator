@@ -1,4 +1,5 @@
 import { bearingDegrees, distanceKm, formatGrid, onMap, parseGrid, type Point } from './map-math';
+import {resolveWaypointPositions,type RoutedStop} from './waypoint-geometry';
 
 /**
  * Fictional IRON NEST train-mission timing model.
@@ -9,6 +10,13 @@ export interface TrainStop {
   name: string;
   kmFromStation: number;
   time: string;
+  /** Optional waypoint-specific coordinate source. Missing means legacy route bearing. */
+  id?:string;
+  method?:'route'|'manual'|'observed'|'relative';
+  grid?:string;
+  relativeTo?:string;
+  relativeBearing?:number;
+  relativeKm?:number;
 }
 export interface TrainSchedule {
   nestGrid: string;
@@ -75,11 +83,12 @@ export function trainPositionAt(
   impactClock:string
 ):TrainCalculation {
   const nest=parseGrid(config.nestGrid);
-  const station=parseGrid(config.stationGrid);
-  if(!nest||!station)
-    return {ok:false,error:'Invalid Iron Nest or station grid. Example: C3 1:8.'};
-  if(!Number.isFinite(config.railBearing)||config.railBearing<0||config.railBearing>360)
-    return {ok:false,error:'Rail bearing must be 0–360 degrees.'};
+  if(!nest)return {ok:false,error:'Enter a valid Iron Nest grid.'};
+  const route=resolveWaypointPositions(config);
+  const invalid=route.errors.find(e=>e!==null);
+  if(invalid)return {ok:false,error:invalid};
+  if(route.points.some(p=>p===null))
+    return {ok:false,error:'Every waypoint needs a valid grid or route reference.'};
   const schedule=validateSchedule(config.stops);
   if(schedule.error)return {ok:false,error:schedule.error};
   const steps=schedule.steps;
@@ -98,12 +107,13 @@ export function trainPositionAt(
   const span=next.seconds-previous.seconds;
   const fraction=(impact-previous.seconds)/span;
   const km=previous.kmFromStation+(next.kmFromStation-previous.kmFromStation)*fraction;
-  const bearing=config.approachSide==='bearing'
-    ? config.railBearing : (config.railBearing+180)%360;
-  const rad=bearing*Math.PI/180;
+  const startPoint=route.points[steps.indexOf(previous)]!;
+  const endPoint=route.points[steps.indexOf(next)]!;
+  // Follow the segment between the TWO reported waypoint coordinates.
+  // This supports bends, manual positions and observed moving targets.
   const point:Point={
-    x:station.x+Math.sin(rad)*km,
-    y:station.y+Math.cos(rad)*km
+    x:startPoint.x+(endPoint.x-startPoint.x)*fraction,
+    y:startPoint.y+(endPoint.y-startPoint.y)*fraction
   };
   const totalSeconds=ending-beginning;
   const speedKmh=(steps[0].kmFromStation-steps[steps.length-1].kmFromStation)*3600/totalSeconds;

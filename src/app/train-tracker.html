@@ -61,20 +61,101 @@
       <div><span class="train-kicker">WAYPOINTS // GAME TIMETABLE</span><h3>Reported waypoints</h3></div>
       <button type="button" class="train-reset" (click)="addWaypoint()">+ WAYPOINT</button>
     </div>
-    <div class="waypoint-list">
-      @for(stop of stops();track $index;let i=$index;let last=$last){
-        <div class="waypoint-row">
-          <div class="waypoint-num">{{ i+1 }}</div>
-          <label class="waypoint-name"><span>LOCATION</span><input type="text" [value]="stop.name" (input)="setStopName(i,$any($event.target).value)"></label>
-          <label><span>DISTANCE TO REFERENCE (KM)</span><input type="text" inputmode="decimal" [disabled]="last" [value]="stop.kmFromStation" (input)="setStopDistance(i,$any($event.target).value)"></label>
-          <label><span>GAME CLOCK (HH:MM:SS)</span><input type="text" inputmode="numeric" [value]="stop.time" (input)="setStopTime(i,$any($event.target).value)" placeholder="10:06:50"></label>
-          <div class="waypoint-action">
-            @if(!last&&stops().length>2){<button type="button" (click)="removeWaypoint(i)" [attr.aria-label]="'Remove '+stop.name">×</button>}
-            @if(last){<span>ARRIVAL</span>}
-          </div>
-        </div>
+    <div class="waypoint-compact-list" aria-label="Route waypoints">
+      @for(entry of waypointEntries();track entry.stop.id){
+        <button type="button" class="waypoint-summary"
+          [class.current]="editingStopId()===entry.stop.id"
+          (click)="editWaypoint(entry.stop.id!)"
+          [attr.aria-expanded]="editingStopId()===entry.stop.id">
+          <span class="wp-summary-number">{{entry.index+1}}</span>
+          <span class="wp-summary-title"><strong>{{entry.stop.name}}</strong>
+            <small>{{entry.method==='route'?'CALCULATED':
+              entry.method==='observed'?'OBSERVED':
+              entry.method==='manual'?'MANUAL GRID':'RELATIVE'}}</small>
+          </span>
+          <span class="wp-summary-result" [class.wp-missing]="!entry.grid">
+            <b>{{entry.grid??'NO GRID'}}</b><small>{{entry.stop.time || 'TIME NOT SET'}}</small>
+          </span>
+          <span class="wp-chevron">{{editingStopId()===entry.stop.id?'▴':'▾'}}</span>
+        </button>
       }
     </div>
+    @if(activeWaypoint();as selected){
+      <section class="waypoint-editor" aria-label="Edit selected waypoint">
+        <div class="wp-editor-head">
+          <strong>EDIT · {{selected.name}}</strong>
+          @if(!activeIsArrival()&&stops().length>2){
+            <button type="button" class="wp-delete" (click)="removeWaypoint(activeWaypointIndex())">REMOVE</button>
+          }
+        </div>
+        <label class="train-field"><span>WAYPOINT NAME</span>
+          <input type="text" maxlength="30" [value]="selected.name"
+            (input)="setStopName(activeWaypointIndex(),$any($event.target).value)">
+        </label>
+        @if(!activeIsArrival()){
+          <label class="train-field"><span>POSITION METHOD</span>
+            <select [value]="activeMethod()" (change)="setWaypointMethod($any($event.target).value)">
+              <option value="route">Calculated · route bearing + distance</option>
+              <option value="manual">Manual · exact grid</option>
+              <option value="observed">Observed · reported grid / time</option>
+              <option value="relative">Relative · reference + bearing + distance</option>
+            </select>
+          </label>
+          @if(activeMethod()==='manual'||activeMethod()==='observed'){
+            <div class="waypoint-coordinates">
+              <div class="wp-grid-caption"><strong>{{activeMethod()==='observed'?'OBSERVED POSITION':'MANUAL POSITION'}}</strong>
+                <span>{{selected.grid||'UNCONFIRMED'}}</span></div>
+              <app-grid-select [value]="activeGridSelection()" (valueChange)="setActiveWaypointGrid($event)"></app-grid-select>
+              @if(!selected.grid){
+                <button class="train-reset wp-confirm" type="button" (click)="confirmActiveWaypointGrid()">CONFIRM A1 0:0</button>
+              }
+            </div>
+          }@else if(activeMethod()==='relative'){
+            <label class="train-field"><span>REFERENCE POINT</span>
+              <select [value]="selected.relativeTo||'arrival'" (change)="setRelativeSource($any($event.target).value)">
+                <option value="arrival">Route arrival / reference</option>
+                @for(wp of relativeSources();track wp.id){
+                  <option [value]="wp.id">{{wp.name}} · {{wp.grid??'calculated'}}</option>
+                }
+              </select>
+            </label>
+            <div class="wp-pair">
+              <label class="train-field"><span>BEARING FROM REFERENCE (°)</span>
+                <input type="text" inputmode="decimal" [value]="selected.relativeBearing??''"
+                  (input)="setRelativeNumber('relativeBearing',$any($event.target).value)" placeholder="e.g. 180">
+              </label>
+              <label class="train-field"><span>DISTANCE FROM REFERENCE (KM)</span>
+                <input type="text" inputmode="decimal" [value]="selected.relativeKm??''"
+                  (input)="setRelativeNumber('relativeKm',$any($event.target).value)" placeholder="e.g. 2.50">
+              </label>
+            </div>
+          }@else{
+            <p class="train-note">Position uses the route bearing and the distance below, measured from the arrival grid.</p>
+          }
+        }@else{
+          <p class="train-note">This is the route arrival point. Change its grid in the Reference / Arrival selector above.</p>
+        }
+        <div class="wp-pair">
+          @if(!activeIsArrival()){
+            <label class="train-field"><span>REPORTED ROUTE DISTANCE (KM)</span>
+              <input type="text" inputmode="decimal" [value]="selected.kmFromStation"
+                (input)="setStopDistance(activeWaypointIndex(),$any($event.target).value)" placeholder="distance along route">
+            </label>
+          }
+          <label class="train-field"><span>GAME CLOCK · HH:MM:SS</span>
+            <input type="text" inputmode="numeric" [value]="selected.time"
+              (input)="setStopTime(activeWaypointIndex(),$any($event.target).value)" placeholder="10:06:50">
+          </label>
+        </div>
+        @if(waypointGeometry().errors[activeWaypointIndex()];as issue){
+          <p class="train-error">{{issue}}</p>
+        }@else if(waypointGeometry().grids[activeWaypointIndex()];as grid){
+          <div class="wp-resolved"><span>POSITION ON MAP</span><strong>{{grid}}</strong>
+            <button type="button" (click)="openRouteMap()">VIEW MAP ↗</button>
+          </div>
+        }
+      </section>
+    }
     @if(checked().error){<p class="train-error">{{ checked().error }}</p>}
     @if(segmentSpeeds();as speeds){
       <div class="train-segment-title">SPEED BETWEEN REPORTS</div>
@@ -144,7 +225,7 @@
       <button class="train-send" type="button" [disabled]="!calculated().ok || !firing()" (click)="transfer()">+ FIRE SOLUTION →</button>
       @if(notice()){<p class="train-feedback" role="status">{{ notice() }}</p>}
     </section>
-    <p class="train-disclaimer">Game companion: linear movement is interpolated between waypoint reports; the model does not extrapolate beyond the supplied timetable. Check the route orientation and reference coordinates in-game. Reported High Tide speed is a player observation, not a hardcoded game constant.</p>
+    <p class="train-disclaimer">Game companion: motion interpolates between waypoint grids as straight segments; it does not extrapolate beyond the reported timetable. Manual positions and observations can introduce route turns. Check the route orientation and reference coordinates in-game. Reported High Tide speed is a player observation, not a hardcoded game constant.</p>
   </aside>
 </div>
 
@@ -172,17 +253,17 @@
         <line x1="974" x2="974" y1="37" y2="497" stroke="#4b5a4c"/>
         <line x1="54" x2="974" y1="497" y2="497" stroke="#4b5a4c"/>
         <g clip-path="url(#train-map-clip)">
-          @if(routeEnd();as start){
-            @if(stationPosition();as station){
-              <line [attr.x1]="x(start.x)" [attr.y1]="y(start.y)"
-                [attr.x2]="x(station.x)" [attr.y2]="y(station.y)"
-                stroke="#d0b68a" stroke-width="7" stroke-dasharray="20 5 2 5"/>
-            }
+          @for(segment of routeSegments();track $index){
+            <line [attr.x1]="x(segment.from.x)" [attr.y1]="y(segment.from.y)"
+              [attr.x2]="x(segment.to.x)" [attr.y2]="y(segment.to.y)"
+              stroke="#d0b68a" stroke-width="6" stroke-dasharray="18 5 2 5"/>
           }
           @for(stop of mapStops();track $index){
-            @if(stop.report;as p){
-              <circle [attr.cx]="x(p.position.x)" [attr.cy]="y(p.position.y)" r="7" fill="#f2d9a4" stroke="#202a1f" stroke-width="2"/>
-              <text [attr.x]="x(p.position.x)+10" [attr.y]="y(p.position.y)-13" class="train-map-label">{{ stop.name }}</text>
+            @if(stop.position;as position){
+              <circle [attr.cx]="x(position.x)" [attr.cy]="y(position.y)"
+                r="7" fill="#f2d9a4" stroke="#202a1f" stroke-width="2"/>
+              <text [attr.x]="x(position.x)+10" [attr.y]="y(position.y)-13"
+                class="train-map-label">{{stop.name}} · {{stop.grid}}</text>
             }
           }
           @if(nestPosition();as n){

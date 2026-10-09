@@ -169,3 +169,15 @@ The original intended target coordinates are preserved for repeated impact corre
 Waypoint now reuses the **same four-dropdown GridSelect component** already used in Observation for Iron Nest and the route reference / arrival grid: **A–T**, **1–10**, **X 0–9**, **Y 0–9**. The Iron Nest coordinate is inherited from Observation automatically. Editing it in Waypoint emits a change back to the Observation graph; it remains one shared map position across both modes, not two unrelated copies. The route reference remains a manual four-field entry: the removed `Use resolved normal-plot reference` dropdown is not restored. Existing locally saved route reference coordinates are preserved, and a route loaded later uses the current Observation Iron Nest position (rather than silently substituting its historical origin). The route reference stays unset until a dropdown is changed or the explicit A1 0:0 confirmation is used.
 
 This applies to mobile as well: the two coordinate groups stack vertically on narrow screens. Waypoint math still uses the exact same grid parse format `C2 5:6` behind the selector.
+
+## Per-waypoint manual, observed and reference-based grids
+
+Waypoint Targeting now offers four distinct location methods for each non-arrival waypoint:
+- **Calculated**: route reference grid + shared bearing / direction + reported route distance (backward compatible).
+- **Manual grid**: enter the exact A–T / 1–10 / X / Y location with the shared GridSelect.
+- **Observed grid**: enter the grid from an in-game spotter report and its associated game clock time. This is a player-entered observation; it is not an automatically imported Observation-mode point.
+- **Relative**: pick the route arrival reference or another waypoint by stable ID, then enter that source's bearing and distance. Cycle / missing reference / off-map detection prevents false firing solutions.
+
+Each waypoint remains on a saved route. For mobile, the waypoint list renders as **compact summaries** of name, grid, time and source method; tapping one expands only that waypoint's inputs. Two-column fields collapse to one column on narrow phones. The map opens in a modal rather than consuming the main scroll region, and draws **individually resolved route segments** and waypoint markers even before all game-clock times have been reported.
+
+Movement prediction interpolates between the positions of neighboring waypoints, allowing bends and updated observations, while preserving the previous straight-line missions' time/distance model. Route distances are still reported route-kilometres used for estimating segment speeds, **not** necessarily Euclidean distance for a curved course. Positions are never extrapolated outside the reported time window. All modes use the game-grid axis convention provisionally until confirmed with an in-game map.

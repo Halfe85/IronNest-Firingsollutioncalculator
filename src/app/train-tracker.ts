@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, effect, signal } from '@angular/core';
-import { COLUMNS, ROWS, parseGrid } from './map-math';
+import { COLUMNS, ROWS, parseGrid, formatGrid } from './map-math';
+import {methodOf,resolveWaypointPositions,type WaypointMethod,type RoutedStop} from './waypoint-geometry';
 import {EMPTY_GRID,gridInputFromText,gridInputLabel,type GridInput} from './graph-math';
 import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
@@ -24,8 +25,8 @@ interface SavedRoute {
   stops:TrainStop[];targetLabel:string;shell:string;cannon:Cannon;routeSpeed?:string;
 }
 const EMPTY_STOPS:TrainStop[]=[
-  {name:'Waypoint A',kmFromStation:5,time:''},
-  {name:'Arrival',kmFromStation:0,time:''}
+  {id:'start',name:'Waypoint A',kmFromStation:5,time:'',method:'route'},
+  {id:'arrival',name:'Arrival',kmFromStation:0,time:'',method:'route'}
 ];
 const MAP_LEFT=54,MAP_TOP=37,CELL=46;
 
@@ -64,6 +65,28 @@ export class TrainTrackerComponent {
   readonly routeName=signal('Route');
   readonly routeSpeed=signal('');
   readonly routeMapOpen=signal(false);
+  readonly editingStopId=signal<string|null>('start');
+  readonly activeWaypointIndex=computed(()=>
+    this.stops().findIndex(s=>s.id===this.editingStopId()));
+  readonly activeWaypoint=computed<RoutedStop|null>(()=>this.stops()[this.activeWaypointIndex()]??null);
+  readonly activeMethod=computed<WaypointMethod>(()=>
+    this.activeWaypoint()?methodOf(this.activeWaypoint()!):'route');
+  readonly activeGridSelection=computed<GridInput>(()=>
+    gridInputFromText(this.activeWaypoint()?.grid??'')??{...EMPTY_GRID});
+  readonly waypointGeometry=computed(()=>resolveWaypointPositions(this.config()));
+  readonly waypointEntries=computed(()=>this.stops().map((stop,i)=>({
+    stop,index:i,grid:this.waypointGeometry().grids[i],
+    error:this.waypointGeometry().errors[i],
+    method:methodOf(stop)
+  })));
+  readonly routeSegments=computed(()=>{
+    const ps=this.waypointGeometry().points;
+    return ps.slice(0,-1).flatMap((p,i)=>p&&ps[i+1]?[{from:p,to:ps[i+1]!}]:[]);
+  });
+  readonly relativeSources=computed(()=>
+    this.stops().slice(0,-1).filter(s=>s.id!==this.editingStopId()));
+  readonly activeIsArrival=computed(()=>
+    this.activeWaypointIndex()===this.stops().length-1);
   readonly shellOptions=SHELLS;
   readonly shell=signal('HCHE');
   readonly cannon=signal<Cannon>('left');
@@ -112,17 +135,24 @@ export class TrainTrackerComponent {
     if(!this.flightIsMeasured())return '';
     return this.launchTime()?'':'Flight time must be 0–3600 seconds, and impact time must be valid.';
   });
-  readonly mapStops=computed(()=>this.stops().map(s=>{
-    const configuration={...this.config()};
-    const outcome=trainPositionAt(configuration,s.time);
-    return {name:s.name,report:outcome.ok?outcome.result:null};
+  readonly mapStops=computed(()=>this.stops().map((stop,i)=>{
+    const position=this.waypointGeometry().points[i];
+    return {name:stop.name,position,grid:this.waypointGeometry().grids[i],
+      method:methodOf(stop)};
   }));
   readonly nestPosition=computed(()=>parseGrid(this.nestGrid()));
   readonly stationPosition=computed(()=>parseGrid(this.stationGrid()));
-  readonly routeEnd=computed(()=>{
-    const points=this.mapStops().map(r=>r.report).filter(p=>!!p);
-    return points[0]?.position??null;
-  });
+  private id(prefix='wp'):string {
+    return prefix+'-'+(typeof crypto!=='undefined'&&'randomUUID' in crypto?
+      crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));
+  }
+  private normalizeStops(stops:readonly TrainStop[]):RoutedStop[]{
+    return stops.map((item,i)=>{
+      const wp=item as RoutedStop;
+      return {...wp,id:typeof wp.id==='string'&&wp.id?wp.id:'legacy-'+i,
+        method:methodOf(wp)};
+    });
+  }
   constructor(){
     this.restore();
     effect(()=>{
@@ -156,7 +186,9 @@ export class TrainTrackerComponent {
       if(Array.isArray(state.stops)&&state.stops.length>=2&&state.stops.length<=12&&
         state.stops.every(s=>s&&typeof s.name==='string'&&
           typeof s.time==='string'&&typeof s.kmFromStation==='number'))
-        this.stops.set(state.stops);
+        this.stops.set(this.normalizeStops(state.stops));
+      const current=this.stops()[0]?.id??null;
+      this.editingStopId.set(current);
       if(typeof state.impactMode==='string')this.impactMode.set(state.impactMode);
       if(typeof state.customImpactClock==='string')this.customImpactClock.set(state.customImpactClock);
       if(typeof state.flightSeconds==='string')this.flightSeconds.set(state.flightSeconds);
@@ -184,6 +216,42 @@ export class TrainTrackerComponent {
   setStopName(index:number,value:string):void{
     this.stops.update(items=>items.map((s,i)=>i===index?{...s,name:value.slice(0,30)}:s));
   }
+  editWaypoint(id:string):void {
+    if(this.stops().some(s=>s.id===id))this.editingStopId.set(id);
+  }
+  setWaypointMethod(method:string):void {
+    if(!['route','manual','observed','relative'].includes(method))return;
+    const i=this.activeWaypointIndex();
+    if(i<0||this.activeIsArrival())return;
+    this.stops.update(stops=>stops.map((s,index)=>index===i?{
+      ...s,method:method as WaypointMethod,
+      ...(method==='manual'||method==='observed'?{grid:s.grid??''}:{})
+    }:s));
+  }
+  setActiveWaypointGrid(grid:GridInput):void {
+    const i=this.activeWaypointIndex();
+    if(i<0||this.activeIsArrival())return;
+    this.stops.update(stops=>stops.map((s,index)=>index===i?
+      {...s,grid:gridInputLabel(grid)}:s));
+  }
+  confirmActiveWaypointGrid():void{
+    const active=this.activeWaypoint();
+    if(active&&!active.grid&&!this.activeIsArrival())
+      this.setActiveWaypointGrid(this.activeGridSelection());
+  }
+  setRelativeSource(id:string):void{
+    const i=this.activeWaypointIndex();
+    if(i<0||this.activeIsArrival())return;
+    this.stops.update(stops=>stops.map((s,index)=>index===i?
+      {...s,relativeTo:id}:s));
+  }
+  setRelativeNumber(field:'relativeBearing'|'relativeKm',text:string):void{
+    const i=this.activeWaypointIndex(),trim=text.trim().replace(',','.');
+    if(i<0||this.activeIsArrival())return;
+    const value=trim===''?NaN:Number(trim);
+    this.stops.update(stops=>stops.map((s,index)=>index===i?
+      {...s,[field]:value}:s));
+  }
   setShell(value:string):void{if(SHELLS.some(s=>s===value))this.shell.set(value);}
   setCannon(value:string):void{const c=cannonOrUnassigned(value);if(c)this.cannon.set(c);}
   setWaypointNest(grid:GridInput):void{
@@ -203,8 +271,10 @@ export class TrainTrackerComponent {
   newRoute():void{
     this.routeName.set('New route');this.routeSpeed.set('');
     this.stationGrid.set('');this.railBearing.set('0');this.approachSide.set('bearing');
-    this.stops.set([{name:'Waypoint A',kmFromStation:5,time:''},
-      {name:'Arrival reference',kmFromStation:0,time:''}]);
+    const start:TrainStop={id:this.id(),name:'Waypoint A',kmFromStation:5,time:'',method:'route'};
+    this.stops.set([start,
+      {id:this.id('arrival'),name:'Arrival reference',kmFromStation:0,time:'',method:'route'}]);
+    this.editingStopId.set(start.id!);
     this.targetLabel.set('Moving target');
     this.impactMode.set('custom');this.customImpactClock.set('');
     this.flightSeconds.set('');
@@ -229,7 +299,9 @@ export class TrainTrackerComponent {
     this.routeName.set(r.name);
     this.nestGrid.set(this.currentNestGrid??r.nestGrid);
     this.stationGrid.set(r.stationGrid);this.railBearing.set(r.railBearing);
-    this.approachSide.set(r.approachSide);this.stops.set(r.stops.map(s=>({...s})));
+    this.approachSide.set(r.approachSide);
+    this.stops.set(this.normalizeStops(r.stops));
+    this.editingStopId.set(this.stops()[0]?.id??null);
     this.targetLabel.set(r.targetLabel);this.shell.set(normalizeShell(r.shell));
     this.cannon.set(cannonOrUnassigned(r.cannon)??'left');
     this.routeSpeed.set(r.routeSpeed??'');
@@ -253,14 +325,19 @@ export class TrainTrackerComponent {
     const gap=(last.kmFromStation-arrival.kmFromStation)/2;
     const t1=clockSeconds(last.time),t2=clockSeconds(arrival.time);
     const nextTime=t1!==null&&t2!==null?this.clock(Math.round((t1+t2+(t2<t1?86400:0))/2)):'';
-    this.stops.update(items=>[...items.slice(0,-1),{
-      name:'Waypoint '+(items.length),kmFromStation:arrival.kmFromStation+gap,time:nextTime
-    },items[items.length-1]]);
+    const waypoint:TrainStop={
+      id:this.id(),name:'Waypoint '+s.length,
+      kmFromStation:arrival.kmFromStation+gap,time:nextTime,method:'route'
+    };
+    this.stops.update(items=>[...items.slice(0,-1),waypoint,items[items.length-1]]);
+    this.editingStopId.set(waypoint.id!);
     this.impactMode.set('custom');
   }
   removeWaypoint(index:number):void{
     if(index===this.stops().length-1||this.stops().length<=2)return;
+    const deleted=this.stops()[index]?.id;
     this.stops.update(items=>items.filter((_,i)=>i!==index));
+    if(this.editingStopId()===deleted)this.editingStopId.set(this.stops()[0]?.id??null);
     this.impactMode.set('custom');
   }
   private clock(seconds:number):string{
