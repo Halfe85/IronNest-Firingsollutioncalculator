@@ -4,7 +4,7 @@ import {formatGrid,compassCenter} from './map-math';
 import {TrainTrackerComponent,type MovingFireRequest} from './train-tracker';
 import {PlotMapComponent,type MapObservationMarker} from './plot-map';
 import {
-  gridInputLabel, solvePlotGraph, firingFromPlot,
+  gridInputLabel, solvePlotGraph, firingFromPlot, updateIntelReport,
   type GridInput, type IntelNode, type NodeRole
 } from './graph-math';
 import {GridSelectComponent} from './grid-select';
@@ -206,10 +206,13 @@ export class TacticalPlotterComponent{
     }]}));
     this.observationMapVisible.set(true);
   }
+  originAvailable(id:string):boolean{
+    return this.originOptions().some(origin=>origin.id===id);
+  }
   modifyReport(id:string,key:'sourceId'|'type'|'value',value:string):void{
     const active=this.active();if(!active)return;
     this.changeNode(active.id,n=>({...n,reports:n.reports.map(r=>
-      r.id===id?{...r,[key]:value}:r),chosenCandidate:null}));
+      r.id===id?updateIntelReport(r,key,value):r),chosenCandidate:null}));
   }
   removeReport(id:string):void{
     const active=this.active();if(!active)return;

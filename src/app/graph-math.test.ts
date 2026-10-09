@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,type IntelNode} from './graph-math.ts';
+import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,updateIntelReport,type IntelNode} from './graph-math.ts';
 test('four dropdown grid fields preserve the specified 100m grid coordinates',()=>{
   const p=gridInputFromText('A2 2:3')!;
   assert.deepEqual(p,{letter:'A',column:2,x:2,y:3});
@@ -43,4 +43,24 @@ test('bad intel and self-cycle cannot invent an aimpoint',()=>{
   assert.equal(solvePlotGraph(n).get('a')?.status,'blocked');
   const noReports=[n[0],{...n[1],reports:[]}];
   assert.equal(solvePlotGraph(noReports).get('a')?.status,'missing');
+});
+
+test('selected observation FROM, TYPE and compass direction survive serialized restore',()=>{
+  const created={id:'report-test',sourceId:'nest',type:'bearing' as const,value:'85'};
+  const from=updateIntelReport(created,'sourceId','s2');
+  const kind=updateIntelReport(from,'type','sector');
+  const direction=updateIntelReport(kind,'value','WSW');
+  assert.deepEqual(direction,{id:'report-test',sourceId:'s2',type:'sector',value:'WSW'});
+  const saved=JSON.stringify({nodes:[{id:'target',name:'Target',role:'target',
+    reports:[direction]}]});
+  const restored=JSON.parse(saved).nodes[0].reports[0];
+  assert.deepEqual(restored,direction);
+  assert.equal(updateIntelReport(restored,'type','range').value,'');
+});
+test('changing observation source does not reset the selected type or input',()=>{
+  const input={id:'r1',sourceId:'nest',type:'range' as const,value:'5.73'};
+  const result=updateIntelReport(input,'sourceId','spotter-2');
+  assert.equal(result.type,'range');
+  assert.equal(result.value,'5.73');
+  assert.equal(result.sourceId,'spotter-2');
 });

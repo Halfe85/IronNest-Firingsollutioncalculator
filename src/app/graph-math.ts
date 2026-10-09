@@ -15,6 +15,19 @@ export interface IntelReport {
   type:IntelType;
   value:string;
 }
+/** Immutable report update keeps selected dropdown values in the graph state. */
+export function updateIntelReport(
+  report:IntelReport,key:'sourceId'|'type'|'value',value:string
+):IntelReport{
+  if(key==='sourceId')return {...report,sourceId:value};
+  if(key==='value')return {...report,value};
+  if(value!=='bearing'&&value!=='range'&&value!=='sector')return report;
+  if(value===report.type)return report;
+  return {...report,type:value,
+    // A compass select must never visually show 'N' while retaining a
+    // previous numeric bearing in state (and vice versa).
+    value:value==='sector'?'N':report.type==='sector'?'':report.value};
+}
 export interface IntelNode {
   id:string;
   name:string;

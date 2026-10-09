@@ -97,16 +97,23 @@
           @for(report of node.reports;track report.id){
             <div class="intel-line">
               <label><span>FROM</span><select [value]="report.sourceId" (change)="modifyReport(report.id,'sourceId',$any($event.target).value)">
-                @for(origin of originOptions();track origin.id){<option [value]="origin.id">{{origin.name}}</option>}
+                @if(!originAvailable(report.sourceId)){
+                  <option [value]="report.sourceId" [selected]="true">Missing source — select another</option>
+                }
+                @for(origin of originOptions();track origin.id){
+                  <option [value]="origin.id" [selected]="report.sourceId===origin.id">{{origin.name}}</option>
+                }
               </select></label>
               <label><span>TYPE</span><select [value]="report.type" (change)="modifyReport(report.id,'type',$any($event.target).value)">
-                <option value="bearing">Bearing °</option><option value="range">Range km</option><option value="sector">Compass</option>
+                <option value="bearing" [selected]="report.type==='bearing'">Bearing °</option>
+                <option value="range" [selected]="report.type==='range'">Range km</option>
+                <option value="sector" [selected]="report.type==='sector'">Compass</option>
               </select></label>
               <label><span>VALUE</span>
                 @if(report.type==='sector'){
                   <select [value]="report.value" (change)="modifyReport(report.id,'value',$any($event.target).value)">
                     @for(dir of ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];track dir){
-                      <option [value]="dir">{{dir}}</option>
+                      <option [value]="dir" [selected]="report.value===dir">{{dir}}</option>
                     }
                   </select>
                 } @else {
