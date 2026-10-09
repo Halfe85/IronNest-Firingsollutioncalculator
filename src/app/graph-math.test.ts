@@ -1,6 +1,7 @@
+import {formatGrid} from './map-math.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,updateIntelReport,type IntelNode} from './graph-math.ts';
+import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,updateIntelReport,approximateRayCircle,type IntelNode} from './graph-math.ts';
 test('four dropdown grid fields preserve the specified 100m grid coordinates',()=>{
   const p=gridInputFromText('A2 2:3')!;
   assert.deepEqual(p,{letter:'A',column:2,x:2,y:3});
@@ -63,4 +64,53 @@ test('changing observation source does not reset the selected type or input',()=
   assert.equal(result.type,'range');
   assert.equal(result.value,'5.73');
   assert.equal(result.sourceId,'spotter-2');
+});
+
+test('near-tangent bearing and range can resolve as visibly approximate',()=>{
+  const point=approximateRayCircle(
+    {x:15.34691149960833,y:8.004206837213644},201,
+    {x:4.5,y:5.5},9.17
+  );
+  assert.equal(point.length,1);
+  assert.ok(point[0].x>13.1&&point[0].x<13.2);
+  assert.ok(Math.abs(Math.hypot(point[0].x-4.5,point[0].y-5.5)-9.17)<.06);
+  assert.deepEqual(approximateRayCircle({x:0,y:0},90,{x:0,y:5},2),[]);
+});
+test('four-stage plot solves Target2 approximately and marks dependent Target3',()=>{
+  const nodes:IntelNode[]=[
+    {id:'nest',role:'nest',name:'Iron Nest',
+      grid:gridInputFromText('B3 4:1')!,reports:[]},
+    {id:'s1',role:'spotter',name:'Spotter 1',
+      grid:gridInputFromText('E6 5:5')!,reports:[]},
+    {id:'s2',role:'spotter',name:'Spotter 2',
+      grid:gridInputFromText('D6 1:0')!,reports:[]},
+    {id:'s3',role:'spotter',name:'Spotter 3',
+      grid:gridInputFromText('B2 7:9')!,reports:[]},
+    {id:'alpha',role:'reference',name:'Alpha',reports:[
+      {id:'a1',sourceId:'s1',type:'bearing',value:'077'},
+      {id:'a2',sourceId:'s2',type:'range',value:'12.61'}
+    ]},
+    {id:'t1',role:'target',name:'Target 1',reports:[
+      {id:'t1a',sourceId:'alpha',type:'bearing',value:'179'},
+      {id:'t1b',sourceId:'s3',type:'bearing',value:'090'}
+    ]},
+    {id:'t2',role:'target',name:'Target 2',reports:[
+      {id:'t2a',sourceId:'alpha',type:'bearing',value:'201'},
+      {id:'t2b',sourceId:'s1',type:'range',value:'9.17'}
+    ]},
+    {id:'t3',role:'target',name:'Target 3',reports:[
+      {id:'t3a',sourceId:'t2',type:'bearing',value:'029'},
+      {id:'t3b',sourceId:'t2',type:'range',value:'5.87'}
+    ]}
+  ];
+  const result=solvePlotGraph(nodes);
+  assert.equal(formatGrid(result.get('alpha')!.position!),'P9 3:0');
+  assert.equal(formatGrid(result.get('t1')!.position!),'P2 5:9');
+  assert.equal(Boolean(result.get('t1')!.approximate),false);
+  assert.equal(formatGrid(result.get('t2')!.position!),'N3 1:2');
+  assert.equal(result.get('t2')!.approximate,true);
+  assert.match(result.get('t2')!.message,/Approximate position/);
+  assert.equal(formatGrid(result.get('t3')!.position!),'Q8 0:3');
+  assert.equal(result.get('t3')!.approximate,true);
+  assert.match(result.get('t3')!.message,/approximate reference/i);
 });

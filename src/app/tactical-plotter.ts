@@ -228,7 +228,7 @@ export class TacticalPlotterComponent{
   plotLabel(id:string):string{
     const r=this.solution().get(id);
     if(!r)return 'Unresolved';
-    return r.position?formatGrid(r.position)??'Outside map':
+    return r.position?(r.approximate?'≈ ':'')+(formatGrid(r.position)??'Outside map'):
       r.status==='ambiguous'?r.candidates.length+' possible':
       r.status==='blocked'?'Waiting for reference':
       r.status==='conflict'?'Check reports':'Needs intel';

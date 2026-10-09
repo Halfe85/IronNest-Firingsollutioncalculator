@@ -43,6 +43,8 @@ export interface PlotNode {
   candidates:Point[];
   position:Point|null;
   message:string;
+  /** A numerically acceptable but not exact report, or depends on one. */
+  approximate?:boolean;
 }
 export interface PlotGraph {
   results:PlotNode[];
@@ -99,13 +101,32 @@ function readObservation(report:IntelReport, origin:Point):Observation|null{
     report.type==='bearing'&&(value<0||value>360)) return null;
   return {type:report.type,origin,value};
 }
+/** A ray may graze a range circle just beyond it because the game rounds
+ * its bearing, range and 100 m map coordinates. Keep the exact intersection
+ * preferred, and allow at most a RANGE_TOLERANCE_KM closest-point fallback.
+ * This point is estimated and must be flagged in any downstream targeting.
+ */
+export function approximateRayCircle(
+  origin:Point,bearing:number,center:Point,radius:number
+):Point[]{
+  const exact=intersectRayCircle(origin,bearing,center,radius);
+  if(exact.length)return exact;
+  if(!Number.isFinite(radius)||radius<=0||!Number.isFinite(bearing))return [];
+  const radians=bearing*Math.PI/180;
+  const ux=Math.sin(radians),uy=Math.cos(radians);
+  const t=(center.x-origin.x)*ux+(center.y-origin.y)*uy;
+  if(t<0)return [];
+  const point={x:origin.x+t*ux,y:origin.y+t*uy};
+  const gap=distanceKm(center,point)-radius;
+  return gap>=0&&gap<=.06+1e-9?[point]:[];
+}
 function pairIntersections(a:Observation,b:Observation):Point[]{
   if(a.type==='bearing'&&b.type==='bearing')
     return intersectRays(a.origin,a.value,b.origin,b.value);
   if(a.type==='bearing'&&b.type==='range')
-    return intersectRayCircle(a.origin,a.value,b.origin,b.value);
+    return approximateRayCircle(a.origin,a.value,b.origin,b.value);
   if(a.type==='range'&&b.type==='bearing')
-    return intersectRayCircle(b.origin,b.value,a.origin,a.value);
+    return approximateRayCircle(b.origin,b.value,a.origin,a.value);
   if(a.type==='range'&&b.type==='range')
     return intersectCircles(a.origin,a.value,b.origin,b.value);
   return [];
@@ -160,10 +181,20 @@ export function solvePlotGraph(nodes:readonly IntelNode[]):PlotGraph{
       const chosenValid=typeof chosen==='number'&&Number.isInteger(chosen)&&chosen>=0&&chosen<candidates.length;
       const position=candidates.length===1?candidates[0]:chosenValid?candidates[chosen!]:null;
       const status:PlotStatus=candidates.length===0?'conflict':position?'located':'ambiguous';
-      computed.set(node.id,{node,status,candidates,position,
+      const inheritedApproximate=refs.some(ref=>ref?.approximate);
+      const maximumRangeError=position?Math.max(0,...obs.filter(o=>o.type==='range')
+        .map(o=>Math.abs(distanceKm(o.origin,position)-o.value))):0;
+      const localApproximate=maximumRangeError>0.01;
+      const approximate=Boolean(position)&&(localApproximate||inheritedApproximate);
+      computed.set(node.id,{node,status,candidates,position,approximate,
         message:status==='conflict'?'No valid intersection; verify reports and map orientation':
           status==='ambiguous'?'Multiple possible positions: choose one to continue':
-          'Target coordinates resolved'});
+          localApproximate?
+            'Approximate position: range differs by '+(maximumRangeError*1000).toFixed(0)+
+            ' metres from the report. Check the bearing and distance.':
+          inheritedApproximate?
+            'Estimated from an approximate reference point; verify upstream reports.':
+            'Target coordinates resolved'});
       progressed=true;
     }
     if(!progressed)break;
