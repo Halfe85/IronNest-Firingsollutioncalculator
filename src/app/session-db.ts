@@ -39,6 +39,17 @@ class SessionDatabase {
     }catch{ /* browsers blocking storage use this page's in-memory token */ }
     this.id=token;
     this.firstOpen=firstOpen;
+    if(firstOpen){
+      // Older releases wrote permanent localStorage data. Do not leave that
+      // information behind when the operator opts into short-lived sessions.
+      try{
+        for(const legacyKey of [
+          'iron-nest-shots-v2','iron-nest-fcc-v1',
+          'iron-nest-plot-graph-v1','iron-nest-train-v2','iron-nest-train-v1',
+          'iron-nest-map-v2','iron-nest-map-v1'
+        ])localStorage.removeItem(legacyKey);
+      }catch{ /* blocked storage */ }
+    }
   }
   private connect():Promise<IDBDatabase>{
     if(this.dbPromise)return this.dbPromise;
