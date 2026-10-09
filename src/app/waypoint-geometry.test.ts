@@ -68,3 +68,33 @@ test('out-of-map manual grid invalidates interpolation without losing saved inpu
   assert.equal(resolveWaypointPositions(route).grids[0],null);
   assert.equal(trainPositionAt(route,'10:06:50').ok,false);
 });
+
+// Two independently configured bearings and direction switches on one route.
+test('different waypoints can have different direction from reference',()=>{
+  const route:TrainSchedule={...base,stops:[
+    {...base.stops[0],routeBearing:90,routeDirection:'bearing'},
+    {...base.stops[1],routeBearing:90,routeDirection:'opposite'},
+    {...base.stops[2],routeBearing:0,routeDirection:'bearing'},
+    base.stops[3]
+  ]};
+  const r=resolveWaypointPositions(route);
+  assert.deepEqual(r.grids,['P6 0:4','F6 0:4','J8 0:4','J6 0:4']);
+  assert.equal(trainPositionAt(route,'10:10:10').ok,true);
+});
+test('per-waypoint bearing overrides global bearing and legacy waypoints inherit global direction',()=>{
+  const route:TrainSchedule={...base,approachSide:'opposite',stops:[
+    {...base.stops[0],routeBearing:90,routeDirection:'bearing'},
+    base.stops[1],base.stops[2],base.stops[3]
+  ]};
+  assert.deepEqual(resolveWaypointPositions(route).grids,
+    ['P6 0:4','F6 0:4','H6 0:4','J6 0:4']);
+});
+test('relative waypoint direction can be inverted without changing its reference',()=>{
+  const route:TrainSchedule={...base,stops:[
+    {...base.stops[0],method:'relative',relativeTo:'b',relativeBearing:0,
+      relativeDirection:'opposite',relativeKm:2},
+    {...base.stops[1],method:'manual',grid:'N6 0:4'},
+    base.stops[2],base.stops[3]
+  ]};
+  assert.equal(resolveWaypointPositions(route).grids[0],'N4 0:4');
+});

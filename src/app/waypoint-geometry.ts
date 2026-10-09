@@ -41,8 +41,6 @@ export function resolveWaypointPositions(schedule:TrainSchedule):WaypointResolut
   const status=Array(n).fill(0);
   const arrival=parseGrid(schedule.stationGrid);
   const map=new Map(steps.map((s,i)=>[s.id,i]));
-  const railBearing=schedule.approachSide==='opposite'
-    ?(schedule.railBearing+180)%360:schedule.railBearing;
   function locate(index:number):Point|null {
     if(status[index]===2)return points[index];
     if(status[index]===1){errors[index]='Circular waypoint reference';return null;}
@@ -67,20 +65,30 @@ export function resolveWaypointPositions(schedule:TrainSchedule):WaypointResolut
         else origin=locate(dep);
       }
       if(origin){
-        p=offsetPoint(origin,stop.relativeBearing??NaN,stop.relativeKm??NaN);
+        const bearing=stop.relativeBearing??NaN;
+        const direction=stop.relativeDirection==='opposite'?'opposite':'bearing';
+        p=offsetPoint(origin,direction==='opposite'?(bearing+180)%360:bearing,
+          stop.relativeKm??NaN);
         if(!p)errors[index]='Check relative bearing / distance / map boundaries';
       }else if(!errors[index]){
         errors[index]='Referenced point has no valid position';
       }
     }else{
       if(!arrival)errors[index]='Set the arrival / reference grid';
-      else if(!validBearing(schedule.railBearing))
-        errors[index]='Set the route bearing (0–360°)';
       else{
-        // The train can begin beyond the drawn map and enter later.
-        // Only grid reports (manual/observed) must always be on-map.
-        p=offsetPoint(arrival,railBearing,stop.kmFromStation,true);
-        if(!p)errors[index]='Derived position is outside the map or distance is invalid';
+        // Existing saved routes inherit their former global bearing/direction.
+        // A changed waypoint overrides only its own heading and side.
+        const bearing=stop.routeBearing===undefined? schedule.railBearing : (stop.routeBearing??NaN);
+        const direction=stop.routeDirection??schedule.approachSide;
+        if(!validBearing(bearing))errors[index]='Enter this waypoint\'s bearing (0–360°)';
+        else if(direction!=='bearing'&&direction!=='opposite')
+          errors[index]='Choose this waypoint\'s direction from reference';
+        else{
+          // A computed entry point may be beyond the drawn map and enter later.
+          const heading=direction==='opposite'?(bearing+180)%360:bearing;
+          p=offsetPoint(arrival,heading,stop.kmFromStation,true);
+          if(!p)errors[index]='Invalid distance from route reference';
+        }
       }
     }
     if(status[index]===1){

@@ -42,13 +42,7 @@
         }
       </div>
     </div>
-    <div class="location-grid waypoint-direction">
-      <label><span>ROUTE BEARING FROM REFERENCE (°)</span><input type="text" inputmode="decimal" [value]="railBearing()" (input)="railBearing.set($any($event.target).value)" placeholder="e.g. 90"></label>
-      <label><span>DIRECTION FROM REFERENCE</span><select [value]="approachSide()" (change)="approachSide.set($any($event.target).value)">
-          <option value="bearing">Along entered bearing</option><option value="opposite">Opposite the bearing</option>
-        </select></label>
-    </div>
-    <p class="train-note">Enter your own reference grid, route bearing, waypoint distances and clock times. A bearing alone does not establish the arrival direction. Spotter positions and triangulation remain available in Observation mode.</p>
+    <p class="train-note">Set each waypoint's bearing and direction inside its own editor. The arrival grid is shared; directions can differ between waypoints.</p>
 
     <div class="speed-assisted-waypoints">
       <label class="train-field"><span>OPTIONAL CONSTANT SPEED · KM/H</span>
@@ -129,8 +123,30 @@
                   (input)="setRelativeNumber('relativeKm',$any($event.target).value)" placeholder="e.g. 2.50">
               </label>
             </div>
+            <label class="train-field"><span>DIRECTION FROM REFERENCE</span>
+              <select [value]="selected.relativeDirection??'bearing'"
+                (change)="setRelativeDirection($any($event.target).value)">
+                <option value="bearing">Along entered bearing</option>
+                <option value="opposite">Opposite bearing (+180°)</option>
+              </select>
+            </label>
           }@else{
-            <p class="train-note">Position uses the route bearing and the distance below, measured from the arrival grid.</p>
+            <div class="wp-pair">
+              <label class="train-field"><span>BEARING FROM ARRIVAL REFERENCE (°)</span>
+                <input type="text" inputmode="decimal"
+                  [value]="selected.routeBearing===undefined?railBearing():selected.routeBearing??''"
+                  (input)="setRouteBearing($any($event.target).value)"
+                  placeholder="e.g. 90">
+              </label>
+              <label class="train-field"><span>DIRECTION FROM REFERENCE</span>
+                <select [value]="selected.routeDirection??approachSide()"
+                  (change)="setRouteDirection($any($event.target).value)">
+                  <option value="bearing">Along entered bearing</option>
+                  <option value="opposite">Opposite bearing (+180°)</option>
+                </select>
+              </label>
+            </div>
+            <p class="train-note">This waypoint is placed independently from the arrival reference grid. Direction changes here affect only this waypoint.</p>
           }
         }@else{
           <p class="train-note">This is the route arrival point. Change its grid in the Reference / Arrival selector above.</p>

@@ -17,6 +17,11 @@ export interface TrainStop {
   relativeTo?:string;
   relativeBearing?:number;
   relativeKm?:number;
+  /** Per-waypoint compass reading and direction from the route arrival reference. */
+  routeBearing?:number|null;
+  routeDirection?:'bearing'|'opposite';
+  /** Per-waypoint orientation when using another waypoint as a reference. */
+  relativeDirection?:'bearing'|'opposite';
 }
 export interface TrainSchedule {
   nestGrid: string;

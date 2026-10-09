@@ -95,7 +95,7 @@ export class TrainTrackerComponent {
   readonly config=computed<TrainSchedule>(()=>({
     nestGrid:this.nestGrid(),
     stationGrid:this.stationGrid(),
-    railBearing:Number(this.railBearing().trim().replace(',','.')),
+    railBearing:this.railBearing().trim()===''?NaN:Number(this.railBearing().trim().replace(',','.')),
     approachSide:this.approachSide(),
     stops:this.stops()
   }));
@@ -245,6 +245,28 @@ export class TrainTrackerComponent {
     this.stops.update(stops=>stops.map((s,index)=>index===i?
       {...s,relativeTo:id}:s));
   }
+  setRouteBearing(value:string):void{
+    const index=this.activeWaypointIndex();
+    if(index<0||this.activeIsArrival())return;
+    const input=value.trim().replace(',','.');
+    const bearing=input===''?null:Number(input);
+    this.stops.update(items=>items.map((stop,i)=>i===index?
+      {...stop,routeBearing:bearing}:stop));
+  }
+  setRouteDirection(value:string):void{
+    if(value!=='bearing'&&value!=='opposite')return;
+    const index=this.activeWaypointIndex();
+    if(index<0||this.activeIsArrival())return;
+    this.stops.update(items=>items.map((stop,i)=>i===index?
+      {...stop,routeDirection:value}:stop));
+  }
+  setRelativeDirection(value:string):void{
+    if(value!=='bearing'&&value!=='opposite')return;
+    const index=this.activeWaypointIndex();
+    if(index<0||this.activeIsArrival())return;
+    this.stops.update(items=>items.map((stop,i)=>i===index?
+      {...stop,relativeDirection:value}:stop));
+  }
   setRelativeNumber(field:'relativeBearing'|'relativeKm',text:string):void{
     const i=this.activeWaypointIndex(),trim=text.trim().replace(',','.');
     if(i<0||this.activeIsArrival())return;
@@ -270,7 +292,7 @@ export class TrainTrackerComponent {
   closeRouteMap():void{this.routeMapOpen.set(false);}
   newRoute():void{
     this.routeName.set('New route');this.routeSpeed.set('');
-    this.stationGrid.set('');this.railBearing.set('0');this.approachSide.set('bearing');
+    this.stationGrid.set('');this.railBearing.set('');this.approachSide.set('bearing');
     const start:TrainStop={id:this.id(),name:'Waypoint A',kmFromStation:5,time:'',method:'route'};
     this.stops.set([start,
       {id:this.id('arrival'),name:'Arrival reference',kmFromStation:0,time:'',method:'route'}]);
