@@ -1,7 +1,7 @@
 import {formatGrid} from './map-math.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,updateIntelReport,approximateRayCircle,type IntelNode} from './graph-math.ts';
+import {GIBRALTAR_MISSION,gridInputToPoint,gridInputFromText,solvePlotGraph,firingFromPlot,updateIntelReport,approximateRayCircle,bearingRayConflict,type IntelNode} from './graph-math.ts';
 test('four dropdown grid fields preserve the specified 100m grid coordinates',()=>{
   const p=gridInputFromText('A2 2:3')!;
   assert.deepEqual(p,{letter:'A',column:2,x:2,y:3});
@@ -113,4 +113,33 @@ test('four-stage plot solves Target2 approximately and marks dependent Target3',
   assert.equal(formatGrid(result.get('t3')!.position!),'Q8 0:3');
   assert.equal(result.get('t3')!.approximate,true);
   assert.match(result.get('t3')!.message,/approximate reference/i);
+});
+
+test('SupplyCash reports from Spotters 3 and 2 correctly diagnose diverging rays',()=>{
+  const s2=gridInputToPoint(gridInputFromText('D6 1:0')!)!;
+  const s3=gridInputToPoint(gridInputFromText('B2 7:9')!)!;
+  const diagnosis=bearingRayConflict(s3,93,s2,73);
+  assert.match(diagnosis??'',/diverge/i);
+  assert.match(diagnosis??'',/behind both observers/i);
+  assert.match(diagnosis??'',/7\.47 km/);
+  assert.match(diagnosis??'',/9\.27 km/);
+  const nodes:IntelNode[]=[
+    {id:'nest',name:'Iron Nest',role:'nest',grid:gridInputFromText('B3 4:1')!,reports:[]},
+    {id:'s2',name:'Spotter #2',role:'spotter',grid:gridInputFromText('D6 1:0')!,reports:[]},
+    {id:'s3',name:'Spotter #3',role:'spotter',grid:gridInputFromText('B2 7:9')!,reports:[]},
+    {id:'cash',name:'SupplyCash',role:'target',reports:[
+      {id:'a',sourceId:'s3',type:'bearing',value:'093'},
+      {id:'b',sourceId:'s2',type:'bearing',value:'073'}
+    ]}
+  ];
+  const result=solvePlotGraph(nodes).get('cash')!;
+  assert.equal(result.status,'conflict');
+  assert.equal(result.position,null);
+  assert.deepEqual(result.candidates,[]);
+  assert.match(result.message,/diverge/i);
+});
+test('proper forward intersections do not trigger the backwards-ray warning',()=>{
+  const s2=gridInputToPoint(gridInputFromText('D6 1:0')!)!;
+  const s3=gridInputToPoint(gridInputFromText('B2 7:9')!)!;
+  assert.equal(bearingRayConflict(s3,73,s2,93),null);
 });

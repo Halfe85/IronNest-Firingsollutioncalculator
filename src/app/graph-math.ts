@@ -138,6 +138,29 @@ function satisfies(point:Point,observation:Observation):boolean{
   if(observation.type==='sector')return error<=11.25+1e-8;
   return error<=.5+1e-8;
 }
+/** Explain impossible forward rays rather than invent a firing solution. */
+export function bearingRayConflict(a:Point,aBearing:number,b:Point,bBearing:number):string|null{
+  if(!Number.isFinite(aBearing)||!Number.isFinite(bBearing))return null;
+  const ar=aBearing*Math.PI/180,br=bBearing*Math.PI/180;
+  const ux=Math.sin(ar),uy=Math.cos(ar);
+  const vx=Math.sin(br),vy=Math.cos(br);
+  const cross=ux*vy-uy*vx;
+  if(Math.abs(cross)<1e-9)return 'The bearing lines are parallel: verify the reported bearings and observers.';
+  const dx=b.x-a.x,dy=b.y-a.y;
+  const t=(dx*vy-dy*vx)/cross;
+  const r=(dx*uy-dy*ux)/cross;
+  if(t<0&&r<0)
+    return 'Bearing rays diverge: their lines meet only behind both observers ('+
+      Math.abs(t).toFixed(2)+' km and '+Math.abs(r).toFixed(2)+
+      ' km backward). Verify each spotter grid and which bearing belongs to which spotter.';
+  if(t<0||r<0)
+    return 'Bearing rays do not intersect in both forward directions; the intersection is behind '+
+      (t<0?'the first':'the second')+' observer. Check the assigned source and bearing.';
+  const p={x:a.x+t*ux,y:a.y+t*uy};
+  if(!onMap(p))
+    return 'The bearing rays intersect outside the 20 × 10 km playable grid. Check spotter positions and bearings.';
+  return null;
+}
 /** Solve reference targets in dependency order; ambiguous references must be explicitly chosen. */
 export function solvePlotGraph(nodes:readonly IntelNode[]):PlotGraph{
   const computed=new Map<string,PlotNode>();
@@ -186,8 +209,12 @@ export function solvePlotGraph(nodes:readonly IntelNode[]):PlotGraph{
         .map(o=>Math.abs(distanceKm(o.origin,position)-o.value))):0;
       const localApproximate=maximumRangeError>0.01;
       const approximate=Boolean(position)&&(localApproximate||inheritedApproximate);
+      const rayConflict=status==='conflict'&&numeric.length===2&&
+        numeric[0].type==='bearing'&&numeric[1].type==='bearing'
+          ?bearingRayConflict(numeric[0].origin,numeric[0].value,
+            numeric[1].origin,numeric[1].value):null;
       computed.set(node.id,{node,status,candidates,position,approximate,
-        message:status==='conflict'?'No valid intersection; verify reports and map orientation':
+        message:status==='conflict'?rayConflict??'No valid intersection; verify reports and map orientation':
           status==='ambiguous'?'Multiple possible positions: choose one to continue':
           localApproximate?
             'Approximate position: range differs by '+(maximumRangeError*1000).toFixed(0)+
