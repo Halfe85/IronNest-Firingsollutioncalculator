@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {parseGrid,formatGrid,compassCenter} from './map-math';
-import {projectImpact,correctFromImpact} from './impact-correction';
+import {projectImpact,correctFromImpact,targetFromImpact} from './impact-correction';
 
 test('Calculate projects east and north by the game bearing convention',()=>{
   const nest=parseGrid('C2 5:6')!;
