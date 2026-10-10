@@ -1,14 +1,14 @@
 <div class="grid-picks">
   <label><span>LETTER</span><select [value]="value.letter" (change)="changed('letter',$any($event.target).value)">
-    @for(v of letters;track v){<option [value]="v">{{v}}</option>}
+    @for(v of letters;track v){<option [value]="v" [selected]="v===value.letter">{{v}}</option>}
   </select></label>
   <label><span>1–10</span><select [value]="value.column" (change)="changed('column',$any($event.target).value)">
-    @for(v of columns;track v){<option [value]="v">{{v}}</option>}
+    @for(v of columns;track v){<option [value]="v" [selected]="v===value.column">{{v}}</option>}
   </select></label>
   <label><span>X</span><select [value]="value.x" (change)="changed('x',$any($event.target).value)">
-    @for(v of sub;track v){<option [value]="v">{{v}}</option>}
+    @for(v of sub;track v){<option [value]="v" [selected]="v===value.x">{{v}}</option>}
   </select></label>
   <label><span>Y</span><select [value]="value.y" (change)="changed('y',$any($event.target).value)">
-    @for(v of sub;track v){<option [value]="v">{{v}}</option>}
+    @for(v of sub;track v){<option [value]="v" [selected]="v===value.y">{{v}}</option>}
   </select></label>
 </div>
