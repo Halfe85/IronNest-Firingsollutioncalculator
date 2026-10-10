@@ -307,7 +307,7 @@ export class AppComponent {
   private cardAnchor(id:string):HTMLElement|null{
     // IDs are read from our generated shots, not interpolated into a CSS selector.
     const elements=document.querySelectorAll<HTMLElement>('.shot-compact[data-shot-id]');
-    for(const node of elements)if(node.dataset['shotId']===id)return node;
+    for(const node of Array.from(elements))if(node.dataset['shotId']===id)return node;
     return null;
   }
   private layoutExpanded(anchor:HTMLElement,mobile:boolean):void{
