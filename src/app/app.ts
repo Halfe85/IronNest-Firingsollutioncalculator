@@ -9,6 +9,7 @@ import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
 import {splitFiringCards,nextActiveFiringCard} from './shot-status';
+import {shotFloatPlacement,type FloatPlacement} from './shot-float';
 
 type Tab='calc'|'plot'|'shots';
 type ShotState='pending'|'hit'|'miss';
@@ -74,6 +75,15 @@ export class AppComponent {
   });
   readonly neutralizedShots=computed(()=>splitFiringCards(this.shots()).neutralized);
   private hitFadeTimer:ReturnType<typeof setTimeout>|null=null;
+  readonly expandedShotId=signal<string|null>(null);
+  readonly expandedShot=computed(()=>
+    this.shots().find(shot=>shot.id===this.expandedShotId())??null);
+  readonly expandedMobile=signal(false);
+  readonly expandedClosing=signal(false);
+  readonly expandedPlacement=signal<FloatPlacement|null>(null);
+  private hoverCloseTimer:ReturnType<typeof setTimeout>|null=null;
+  private expandCloseTimer:ReturnType<typeof setTimeout>|null=null;
+  private mobileHistoryEntry=false;
   readonly hydrated=signal(false);
   readonly activeShotId=signal<string|null>(null);
   readonly modal=signal<'about'|'miss'|null>(null);
@@ -246,16 +256,135 @@ export class AppComponent {
     }finally{this.hydrated.set(true);}
   }
   clearFiringSolutions():void{
+    this.closeExpandedShot();
     this.stopHitFade();
     this.shots.set([]);this.activeShotId.set(null);
     this.selectedMissShot.set(null);this.modal.set(null);this.error.set('');
     this.shotView.set('active');
   }
   @HostListener('document:keydown.escape')
-  closeModal():void{this.modal.set(null);this.selectedMissShot.set(null);}
-  selectTab(tab:Tab):void{this.tab.set(tab);this.error.set('');}
+  closeModal():void{
+    if(this.modal())this.modal.set(null);
+    else this.closeExpandedShot();
+    this.selectedMissShot.set(null);
+  }
+  @HostListener('window:popstate')
+  onBrowserBack():void{
+    if(this.expandedMobile()&&this.expandedShotId()){
+      this.mobileHistoryEntry=false;
+      this.startExpandedClose();
+    }
+  }
+  @HostListener('window:resize')
+  onResize():void{
+    // Recompute from the anchor after a viewport rotation/resize.
+    const id=this.expandedShotId();
+    if(!id||this.expandedClosing())return;
+    const anchor=this.cardAnchor(id);
+    if(anchor)this.layoutExpanded(anchor,this.expandedMobile());
+    else this.startExpandedClose();
+  }
+  selectTab(tab:Tab):void{
+    this.closeExpandedShot();
+    this.tab.set(tab);this.error.set('');
+  }
   selectShotView(view:'active'|'neutralized'):void{
+    this.closeExpandedShot();
     if(view==='active'||this.neutralizedShots().length>0)this.shotView.set(view);
+  }
+  private clearHoverDelay():void{
+    if(this.hoverCloseTimer!==null)clearTimeout(this.hoverCloseTimer);
+    this.hoverCloseTimer=null;
+  }
+  private clearExpandAnimation():void{
+    if(this.expandCloseTimer!==null)clearTimeout(this.expandCloseTimer);
+    this.expandCloseTimer=null;
+  }
+  private isTouchLayout():boolean{
+    return typeof window!=='undefined'&&
+      window.matchMedia('(max-width: 600px), (hover: none)').matches;
+  }
+  private cardAnchor(id:string):HTMLElement|null{
+    // IDs are read from our generated shots, not interpolated into a CSS selector.
+    const elements=document.querySelectorAll<HTMLElement>('.shot-compact[data-shot-id]');
+    for(const node of elements)if(node.dataset['shotId']===id)return node;
+    return null;
+  }
+  private layoutExpanded(anchor:HTMLElement,mobile:boolean):void{
+    const origin=anchor.getBoundingClientRect();
+    const container=anchor.closest('.main-content')?.getBoundingClientRect()??origin;
+    const viewport={left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+    this.expandedPlacement.set(shotFloatPlacement(origin,viewport,container,mobile));
+  }
+  private showExpanded(id:string,anchor:HTMLElement,mobile:boolean):void{
+    if(this.modal()||!this.shots().some(s=>s.id===id))return;
+    this.clearHoverDelay();
+    this.clearExpandAnimation();
+    this.expandedClosing.set(false);
+    if(this.expandedMobile()&&this.mobileHistoryEntry){
+      // Never stack multiple synthetic Android Back entries.
+      this.closeExpandedShot();
+      return;
+    }
+    this.expandedMobile.set(mobile);
+    this.layoutExpanded(anchor,mobile);
+    this.expandedShotId.set(id);
+    if(mobile){
+      try{
+        window.history.pushState({...window.history.state,ironNestExpandedShot:id},'');
+        this.mobileHistoryEntry=true;
+      }catch{this.mobileHistoryEntry=false;}
+    }
+  }
+  hoverShot(id:string,event:MouseEvent):void{
+    if(this.isTouchLayout()||this.expandedMobile()||this.expandedClosing())return;
+    const target=event.currentTarget;
+    if(target instanceof HTMLElement){
+      if(this.expandedShotId()===id){this.clearHoverDelay();return;}
+      this.showExpanded(id,target,false);
+    }
+  }
+  tapShot(id:string,event:MouseEvent):void{
+    const target=event.currentTarget;
+    if(!(target instanceof HTMLElement))return;
+    if(this.isTouchLayout()){
+      this.showExpanded(id,target,true);
+    }else{
+      this.showExpanded(id,target,false);
+    }
+  }
+  stopHoverClose():void{this.clearHoverDelay();}
+  scheduleHoverClose():void{
+    if(this.expandedMobile()||this.expandedClosing())return;
+    this.clearHoverDelay();
+    this.hoverCloseTimer=setTimeout(()=>this.startExpandedClose(),800);
+  }
+  private startExpandedClose():void{
+    this.clearHoverDelay();
+    this.clearExpandAnimation();
+    if(!this.expandedShotId())return;
+    this.expandedClosing.set(true);
+    this.expandCloseTimer=setTimeout(()=>{
+      this.expandedShotId.set(null);
+      this.expandedClosing.set(false);
+      this.expandedMobile.set(false);
+      this.expandedPlacement.set(null);
+      this.expandCloseTimer=null;
+    },210);
+  }
+  closeExpandedShot():void{
+    if(!this.expandedShotId())return;
+    if(this.expandedMobile()&&this.mobileHistoryEntry){
+      this.mobileHistoryEntry=false;
+      // Undo only the synthetic entry created for the enlarged mobile card.
+      window.history.back();
+    }
+    this.startExpandedClose();
+  }
+  /** No timer, overlay or synthetic history entry should leak across tabs. */
+  ngOnDestroy():void{
+    this.clearHoverDelay();this.clearExpandAnimation();
+    if(this.hitFadeTimer!==null)clearTimeout(this.hitFadeTimer);
   }
   setChargeMode(value:string):void{this.chargeMode.set(Number(value));}
   setCannon(value:string):void {
@@ -313,6 +442,7 @@ export class AppComponent {
     this.fadingHitId.set(null);
   }
   markHit(id:string):void{
+    this.closeExpandedShot();
     if(!this.shots().some(s=>s.id===id&&s.state!=='hit'))return;
     this.stopHitFade();
     this.fadingHitId.set(id);
@@ -326,6 +456,7 @@ export class AppComponent {
     this.hitFadeTimer=setTimeout(()=>this.stopHitFade(),240);
   }
   openMiss(id:string):void{
+    this.closeExpandedShot();
     const shot=this.shots().find(s=>s.id===id);
     if(!shot)return;
     this.selectedMissShot.set(id);this.activeShotId.set(id);
@@ -411,12 +542,14 @@ export class AppComponent {
       nestPosition:shot.nestPosition,targetPosition:shot.aimPosition});
   }
   removeShot(id:string):void{
+    if(this.expandedShotId()===id)this.closeExpandedShot();
     if(this.fadingHitId()===id)this.stopHitFade();
     this.shots.update(rows=>rows.filter(s=>s.id!==id));
     this.activeShotId.set(nextActiveFiringCard(this.shots(),this.activeShotId()));
     if(!this.neutralizedShots().length)this.shotView.set('active');
   }
   resetReport(shot:ShotCard):void{
+    this.closeExpandedShot();
     if(this.fadingHitId()===shot.id)this.stopHitFade();
     this.shots.update(rows=>rows.map(s=>s.id===shot.id?{
       ...s,state:'pending' as ShotState,hitAt:null,missKm:null}:s));

@@ -96,7 +96,27 @@
             }
             <div class="shot-tiles">
               @for(shot of activeShots();track shot.id){
-                <ng-container *ngTemplateOutlet="shotCard;context:{$implicit:shot}"></ng-container>
+                <button type="button" class="shot-compact"
+                  [class.is-neutralized]="shot.state==='hit'"
+                  [class.shot-fading]="fadingHitId()===shot.id"
+                  [attr.data-shot-id]="shot.id"
+                  [attr.aria-label]="'Expand firing solution '+shot.label"
+                  (mouseenter)="hoverShot(shot.id,$event)"
+                  (mouseleave)="scheduleHoverClose()"
+                  (click)="tapShot(shot.id,$event)">
+                  <span class="shot-compact-head">
+                    <strong>{{shot.label}}</strong>
+                    <small>{{shot.state==='hit'?'NEUTRALIZED':shot.state==='miss'?'CORRECTED':'ACTIVE'}}</small>
+                  </span>
+                  <span class="shot-compact-data">
+                    <span><small>BRG</small><b>{{shot.bearing | number:'1.1-1'}}°</b></span>
+                    <span><small>ELV</small><b>{{shot.elevation | number:'1.1-1'}}°</b></span>
+                  </span>
+                  <span class="shot-compact-meta">
+                    <b>{{shot.charges}} CHG · {{shot.shell}}</b>
+                    <small>{{gridOf(shot.targetPosition)??'NO GRID'}}</small>
+                  </span>
+                </button>
               }
             </div>
           </section>
@@ -110,7 +130,25 @@
               </div>
               <div class="shot-tiles resolved-shot-tiles">
                 @for(shot of neutralizedShots();track shot.id){
-                  <ng-container *ngTemplateOutlet="shotCard;context:{$implicit:shot}"></ng-container>
+                  <button type="button" class="shot-compact is-neutralized"
+                    [attr.data-shot-id]="shot.id"
+                    [attr.aria-label]="'Review neutralized target '+shot.label"
+                    (mouseenter)="hoverShot(shot.id,$event)"
+                    (mouseleave)="scheduleHoverClose()"
+                    (click)="tapShot(shot.id,$event)">
+                    <span class="shot-compact-head">
+                      <strong>{{shot.label}}</strong>
+                      <small>NEUTRALIZED</small>
+                    </span>
+                    <span class="shot-compact-data">
+                      <span><small>BRG</small><b>{{shot.bearing | number:'1.1-1'}}°</b></span>
+                      <span><small>ELV</small><b>{{shot.elevation | number:'1.1-1'}}°</b></span>
+                    </span>
+                    <span class="shot-compact-meta">
+                      <b>{{shot.charges}} CHG · {{shot.shell}}</b>
+                      <small>{{gridOf(shot.targetPosition)??'NO GRID'}}</small>
+                    </span>
+                  </button>
                 }
               </div>
             </section>
@@ -165,6 +203,40 @@
               </div>
             </article>
           </ng-template>
+          @if(expandedShot();as expanded){
+            @if(expandedPlacement();as placement){
+              @if(expandedMobile()){
+                <div class="shot-float-backdrop" aria-hidden="true"
+                  (click)="closeExpandedShot()"></div>
+              }
+              <section class="shot-float-window" role="dialog"
+                [attr.aria-modal]="expandedMobile()?'true':null"
+                [attr.aria-label]="'Firing solution '+expanded.label"
+                [class.mobile-expanded]="expandedMobile()"
+                [class.closing]="expandedClosing()"
+                [style.left.px]="placement.left"
+                [style.top.px]="placement.top"
+                [style.width.px]="placement.width"
+                [style.height.px]="placement.height"
+                [style.--float-x.px]="placement.fromX"
+                [style.--float-y.px]="placement.fromY"
+                [style.--float-scale-x]="placement.scaleX"
+                [style.--float-scale-y]="placement.scaleY"
+                (mouseenter)="stopHoverClose()"
+                (mouseleave)="scheduleHoverClose()">
+                <div class="shot-float-top">
+                  <span>FIRING SOLUTION · {{expanded.label}}</span>
+                  <button type="button" class="shot-float-close"
+                    (click)="closeExpandedShot()" aria-label="Close expanded firing solution">
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
+                <div class="shot-float-body">
+                  <ng-container *ngTemplateOutlet="shotCard;context:{$implicit:expanded}"></ng-container>
+                </div>
+              </section>
+            }
+          }
         </section>
       }
       @if(error()){<div role="alert" class="inline-error">{{error()}}</div>}

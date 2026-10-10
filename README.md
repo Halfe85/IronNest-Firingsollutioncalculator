@@ -82,7 +82,13 @@ You can save and reopen multiple routes **within the current browser session**.
 
 ### Fire Solutions and missed shots
 
-Saved firing cards show the target, bearing, elevation, charges, shell, cannon and grid. Each active card has two clearly labeled actions: **HIT** and **MISS**.
+Firing solutions now appear as **compact cards**, showing the key aiming figures at a glance. The full details (bearing, elevation, charges, shell, cannon, grid and corrections) open without changing the card grid:
+
+- **Desktop:** Hover over a compact card to expand it into a floating, full-sized firing card. It moves 40% toward the visible viewport's center, and its position/size are clamped so it cannot enlarge the scrollable content. After the mouse leaves the card and floating panel, it remains open for **0.8 seconds** before collapsing.
+- **Mobile and touch devices:** Tap a compact card for a near-full-screen view. Use the top-right **×**, backdrop or **Android Back** to collapse it into its original position. The opening/closing transition starts at the tapped card's screen coordinates.
+- **Accessibility:** The compact cards are real buttons; keyboards can open them, Escape closes the expanded card, and reduced-motion preferences are respected.
+
+Each active firing solution has two actions, **HIT** and **MISS**, available in its expanded card.
 
 - **HIT** marks the target **NEUTRALIZED**, greys out its card and archives it beneath the active firing solutions on desktop. Neutralized cards stay in a scrollable dock at the bottom of the Fire Solutions viewport.
 - On phones, a hit card **fades out of Active Targets**, and a **NEUTRALIZED** tab appears next to **ACTIVE TARGETS**. Only one deck is shown at a time.
