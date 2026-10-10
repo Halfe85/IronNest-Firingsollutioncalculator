@@ -3,19 +3,20 @@ import {Component, HostListener, computed, effect, signal} from '@angular/core';
 import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter';
 import {GridSelectComponent} from './grid-select';
 import {EMPTY_GRID,gridInputFromText,gridInputLabel,gridInputToPoint,type GridInput} from './graph-math';
-import {bearingDegrees,distanceKm,formatGrid,onMap,parseGrid,type Point} from './map-math';
-import {projectImpact,correctFromImpact} from './impact-correction';
+import {bearingDegrees,compassCenter,DIRECTIONS,distanceKm,formatGrid,onMap,parseGrid,type Point} from './map-math';
+import {projectImpact,correctFromImpact,targetFromImpact} from './impact-correction';
 import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
 
 type Tab='calc'|'plot'|'shots';
 type ShotState='pending'|'hit'|'miss';
-type GridCorrectionMode='target'|'impact';
+type GridCorrectionMode='target'|'impact'|'impact-relative';
 interface ShotRevision {
   oldBearing:number;oldDistanceKm:number;oldCharges:number;oldElevation:number;
   reportedGrid:string;kind:GridCorrectionMode;changedAt:string;
   reportedBearing?:number;reportedDistanceKm?:number;
+  impactGrid?:string;directionFormat?:'bearing'|'compass';compassDirection?:string;
 }
 interface ShotCard{
   id:string;label:string;createdAt:string;shell:string; bearing:number;
@@ -26,7 +27,7 @@ interface ShotCard{
   targetPosition?:Point|null;
   aimPosition?:Point|null;
   revisions?:ShotRevision[];
-  lastReport?:{grid:string;kind:GridCorrectionMode}|null;
+  lastReport?:{grid:string;kind:GridCorrectionMode;impactGrid?:string}|null;
   state:ShotState;missKm:number|null;
 }
 function uid():string {
@@ -64,6 +65,23 @@ export class AppComponent {
   readonly modal=signal<'about'|'miss'|null>(null);
   readonly reportGrid=signal<GridInput>({...EMPTY_GRID});
   readonly reportMode=signal<GridCorrectionMode>('target');
+  readonly directionOptions=DIRECTIONS;
+  readonly impactOriginGrid=signal<GridInput>({...EMPTY_GRID});
+  readonly impactOriginConfirmed=signal(false);
+  readonly impactDirectionFormat=signal<'bearing'|'compass'>('bearing');
+  readonly impactBearing=signal('');
+  readonly impactCompass=signal('N');
+  readonly impactOffsetDistance=signal('');
+  readonly impactOffsetBearingValue=computed(()=>{
+    if(this.impactDirectionFormat()==='compass')
+      return compassCenter(this.impactCompass())??NaN;
+    const input=this.impactBearing().trim().replace(',','.');
+    return input===''?NaN:Number(input);
+  });
+  readonly impactOffsetRangeValue=computed(()=>{
+    const input=this.impactOffsetDistance().trim().replace(',','.');
+    return input===''?NaN:Number(input);
+  });
   readonly targetInputMode=signal<'grid'|'bearing'>('grid');
   readonly targetBearing=signal('');
   readonly targetRange=signal('');
@@ -88,6 +106,21 @@ export class AppComponent {
     const originalTarget=shot.targetPosition??projectImpact(nest,shot.bearing,shot.distanceKm);
     const oldAim=shot.aimPosition??originalTarget;
     if(!originalTarget||!oldAim)return null;
+    if(this.reportMode()==='impact-relative'){
+      if(!this.impactOriginConfirmed())return null;
+      const impact=gridInputToPoint(this.impactOriginGrid());
+      if(!impact)return null;
+      const correction=targetFromImpact(nest,impact,
+        this.impactOffsetBearingValue(),this.impactOffsetRangeValue(),shot.charges);
+      if(!correction)return null;
+      return {
+        bearing:correction.bearing,distanceKm:correction.distanceKm,
+        charges:correction.charges,elevation:correction.elevation,
+        grid:correction.grid,targetPosition:correction.targetPosition,
+        aimPosition:correction.targetPosition,
+        errorKm:distanceKm(originalTarget,correction.targetPosition)
+      };
+    }
     if(this.reportMode()==='target'){
       const dist=distanceKm(nest,observed);
       if(dist<=0||dist>30)return null;
@@ -260,6 +293,12 @@ export class AppComponent {
     if(!shot)return;
     this.selectedMissShot.set(id);this.activeShotId.set(id);
     this.reportMode.set('target');this.targetInputMode.set('grid');
+    this.impactDirectionFormat.set('bearing');this.impactCompass.set('N');
+    this.impactBearing.set('');this.impactOffsetDistance.set('');
+    const priorImpact=shot.lastReport?.kind==='impact'?
+      shot.lastReport.grid:shot.lastReport?.impactGrid??null;
+    this.impactOriginGrid.set(gridInputFromText(priorImpact??'')??{...EMPTY_GRID});
+    this.impactOriginConfirmed.set(Boolean(priorImpact&&parseGrid(priorImpact)));
     this.targetBearing.set(shot.bearing.toFixed(2));
     this.targetRange.set(shot.distanceKm.toFixed(3));
     const current=shot.targetPosition??(shot.nestPosition?
@@ -272,7 +311,14 @@ export class AppComponent {
     this.error.set('');this.modal.set('miss');
   }
   setReportMode(mode:string):void{
-    if(mode==='target'||mode==='impact')this.reportMode.set(mode);
+    if(mode==='target'||mode==='impact'||mode==='impact-relative')
+      this.reportMode.set(mode);
+  }
+  setImpactOriginGrid(value:GridInput):void{
+    this.impactOriginGrid.set(value);this.impactOriginConfirmed.set(true);
+  }
+  setImpactDirectionFormat(value:string):void{
+    if(value==='bearing'||value==='compass')this.impactDirectionFormat.set(value);
   }
   setTargetInputMode(mode:string):void{
     if(mode==='grid'||mode==='bearing')this.targetInputMode.set(mode);
@@ -283,12 +329,21 @@ export class AppComponent {
     const origin=original.nestPosition??(this.reportNestConfirmed()?
       gridInputToPoint(this.reportNestGrid()):null);
     if(!origin){this.error.set('Enter the Iron Nest position for this older shot.');return;}
-    const reportedGrid=this.reportMode()==='target'&&this.targetInputMode()==='bearing'
-      ?preview.grid??'':gridInputLabel(this.reportGrid());
+    const reportedGrid=this.reportMode()==='impact-relative'||
+      this.reportMode()==='target'&&this.targetInputMode()==='bearing'
+        ?preview.grid??'':gridInputLabel(this.reportGrid());
+    const impactGrid=this.reportMode()==='impact-relative'
+      ?gridInputLabel(this.impactOriginGrid()):undefined;
     const revision:ShotRevision={
       oldBearing:original.bearing,oldDistanceKm:original.distanceKm,
       oldCharges:original.charges,oldElevation:original.elevation,
       reportedGrid,kind:this.reportMode(),
+      ...(impactGrid?{
+        impactGrid,directionFormat:this.impactDirectionFormat(),
+        compassDirection:this.impactDirectionFormat()==='compass'?this.impactCompass():undefined,
+        reportedBearing:this.impactOffsetBearingValue(),
+        reportedDistanceKm:this.impactOffsetRangeValue()
+      }:{}),
       ...(this.reportMode()==='target'&&this.targetInputMode()==='bearing'
         ?{reportedBearing:this.targetBearingValue(),reportedDistanceKm:this.targetRangeValue()}
         :{}),
@@ -299,7 +354,7 @@ export class AppComponent {
       charges:preview.charges,elevation:preview.elevation,
       nestPosition:origin,targetPosition:preview.targetPosition,
       aimPosition:preview.aimPosition,
-      lastReport:{grid:reportedGrid,kind:this.reportMode()},
+      lastReport:{grid:reportedGrid,kind:this.reportMode(),...(impactGrid?{impactGrid}:{})},
       revisions:[...(s.revisions??[]),revision].slice(-30),
       state:'pending' as ShotState,missKm:null
     }:s));

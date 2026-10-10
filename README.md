@@ -84,14 +84,17 @@ You can save and reopen multiple routes **within the current browser session**.
 
 Saved firing cards show the selected target, bearing, elevation, charges, shell, cannon and grid. Select **✓** for a hit or **×** to open the missed-shot correction dialog.
 
-The dialog supports two different kinds of report:
+The dialog has **three report categories**:
 
-| Report | Meaning |
+| Category | Meaning |
 | --- | --- |
-| **Updated target position** | The target is actually somewhere else. Enter its **grid** or its **bearing + distance from Iron Nest** to recalculate. |
-| **Observed shell impact** | Enter where the shot landed. The calculator preserves the intended target and offsets the next aiming point by the observed position error. |
+| **1. Correct target position** | Enter the actual target **grid**, or its **bearing + distance from Iron Nest**, to recalculate the firing solution. |
+| **2. Observed shell impact** | Enter where the shell landed. Keep the intended target, but offset the next aiming point by the observed shell error. |
+| **3. Target correction from impact** | Enter the **actual shell-impact grid**, then the **bearing (degrees) or 16-point compass direction** and **distance from impact to the target**. Calculate the corrected target grid and firing solution from Iron Nest. |
 
-Corrections update the existing firing card and retain a limited revision history. The impact-offset correction is a first-order game-map approximation, not a calibrated model of shell dispersion. An impossible correction outside the map or available charge range is rejected.
+Category 3 needs a known shell-impact position; it cannot infer one from the old aiming point. If a previous shell-impact report exists on the same firing card, that grid is offered as the starting point. The target-from-impact method moves the **target itself**; category 2 instead compensates for **shell deviation**.
+
+Corrections update the existing firing card and retain a limited revision history, including the impact origin and reported direction for category 3. These are game-map approximations, not calibrated shell-dispersion models. Corrections outside the map or available charge range are rejected.
 
 ## Coordinates and precision
 

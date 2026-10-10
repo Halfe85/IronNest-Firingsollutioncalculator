@@ -87,7 +87,10 @@
                   <span>AIM GRID <strong>{{gridOf(shot.aimPosition)}}</strong></span>
                 }
                 @if(shot.lastReport){
-                  <span>{{shot.lastReport.kind==='target'?'UPDATED TARGET':'LAST IMPACT'}} <strong>{{shot.lastReport.grid}}</strong></span>
+                  <span>{{shot.lastReport.kind==='impact'?'LAST IMPACT':'UPDATED TARGET'}} <strong>{{shot.lastReport.grid}}</strong></span>
+                }
+                @if(shot.lastReport?.impactGrid){
+                  <span>FROM IMPACT <strong>{{shot.lastReport?.impactGrid}}</strong></span>
                 }
                 @if(shot.revisions?.length){<small>{{shot.revisions?.length}} CORRECTION(S) SAVED</small>}
               </div>
@@ -152,10 +155,11 @@
       <header class="modal-header"><h2>Report missed shot</h2><button type="button" (click)="closeModal()" aria-label="Close miss report">×</button></header>
       @if(missShot();as shot){
         <p class="miss-target-name">{{shot.label}} · {{shot.elevation | number:'1.2-2'}}° · {{shot.charges}} CHG</p>
-        <label class="miss-input-label"><span>WHAT GRID ARE YOU REPORTING?</span>
+        <label class="miss-input-label"><span>REPORT CATEGORY</span>
           <select [value]="reportMode()" (change)="setReportMode($any($event.target).value)">
-            <option value="target">Corrected TARGET position (e.g. target farther away)</option>
-            <option value="impact">Observed SHELL IMPACT (adjust shot error)</option>
+            <option value="target">1 · Correct target position</option>
+            <option value="impact">2 · Observed shell impact</option>
+            <option value="impact-relative">3 · Target correction from impact</option>
           </select>
         </label>
         @if(!shot.nestPosition){
@@ -165,25 +169,83 @@
             @if(!reportNestConfirmed()){<button type="button" (click)="reportNestConfirmed.set(true)">CONFIRM NEST GRID</button>}
           </div>
         }
-        <div class="report-grid-input">
-          <span>{{reportMode()==='target'?'ACTUAL TARGET GRID':'ACTUAL SHELL-IMPACT GRID'}}</span>
-          <app-grid-select [value]="reportGrid()" (valueChange)="setReportGrid($event)"></app-grid-select>
-        </div>
-        <p class="miss-hint">
-          @if(reportMode()==='target'){
-            The target is at these coordinates. Recalculate the bearing and elevation directly from Iron Nest.
+        @if(reportMode()==='target'){
+          <label class="miss-input-label"><span>NEW TARGET POSITION BY</span>
+            <select [value]="targetInputMode()" (change)="setTargetInputMode($any($event.target).value)">
+              <option value="grid">Grid coordinates</option>
+              <option value="bearing">Bearing + distance from Iron Nest</option>
+            </select>
+          </label>
+          @if(targetInputMode()==='bearing'){
+            <div class="impact-offset-fields">
+              <label class="miss-input-label"><span>BEARING FROM IRON NEST (°)</span>
+                <input type="text" inputmode="decimal" [value]="targetBearing()"
+                  (input)="targetBearing.set($any($event.target).value)" placeholder="e.g. 093">
+              </label>
+              <label class="miss-input-label"><span>DISTANCE FROM IRON NEST (KM)</span>
+                <input type="text" inputmode="decimal" [value]="targetRange()"
+                  (input)="targetRange.set($any($event.target).value)" placeholder="e.g. 7.50">
+              </label>
+            </div>
           }@else{
-            This is where the shell actually landed. Keep the original target and compensate for the observed map offset.
+            <div class="report-grid-input">
+              <span>ACTUAL TARGET GRID</span>
+              <app-grid-select [value]="reportGrid()" (valueChange)="setReportGrid($event)"></app-grid-select>
+            </div>
           }
-        </p>
+          <p class="miss-hint">Recalculate the firing solution directly from Iron Nest to the corrected target.</p>
+        }@else if(reportMode()==='impact'){
+          <div class="report-grid-input">
+            <span>ACTUAL SHELL-IMPACT GRID</span>
+            <app-grid-select [value]="reportGrid()" (valueChange)="setReportGrid($event)"></app-grid-select>
+          </div>
+          <p class="miss-hint">This is where the shell landed. Keep the intended target and compensate for the observed shot error.</p>
+        }@else{
+          <div class="report-grid-input">
+            <span>ACTUAL SHELL IMPACT GRID · STARTING POINT</span>
+            <app-grid-select [value]="impactOriginGrid()" (valueChange)="setImpactOriginGrid($event)"></app-grid-select>
+            @if(!impactOriginConfirmed()){
+              <button type="button" class="report-confirm-grid"
+                (click)="impactOriginConfirmed.set(true)">CONFIRM A1 0:0</button>
+            }
+          </div>
+          <div class="impact-offset-fields">
+            <label class="miss-input-label"><span>DIRECTION TYPE FROM IMPACT</span>
+              <select [value]="impactDirectionFormat()" (change)="setImpactDirectionFormat($any($event.target).value)">
+                <option value="bearing">Bearing (degrees)</option>
+                <option value="compass">Compass direction</option>
+              </select>
+            </label>
+            @if(impactDirectionFormat()==='bearing'){
+              <label class="miss-input-label"><span>BEARING FROM IMPACT (°)</span>
+                <input type="text" inputmode="decimal" [value]="impactBearing()"
+                  (input)="impactBearing.set($any($event.target).value)" placeholder="e.g. 093">
+              </label>
+            }@else{
+              <label class="miss-input-label"><span>COMPASS FROM IMPACT</span>
+                <select [value]="impactCompass()" (change)="impactCompass.set($any($event.target).value)">
+                  @for(direction of directionOptions;track direction){
+                    <option [value]="direction" [selected]="impactCompass()===direction">{{direction}}</option>
+                  }
+                </select>
+              </label>
+            }
+            <label class="miss-input-label"><span>DISTANCE FROM IMPACT (KM)</span>
+              <input type="text" inputmode="decimal" [value]="impactOffsetDistance()"
+                (input)="impactOffsetDistance.set($any($event.target).value)" placeholder="e.g. 1.50">
+            </label>
+          </div>
+          <p class="miss-hint">Measure from the <strong>shell impact to the actual target</strong>.
+            This moves the target; it does not merely compensate for shell error.</p>
+        }
         @if(reportPreview();as corrected){
           <div class="grid-preview">
-            <div><span>NEW AIM GRID</span><strong>{{corrected.grid}}</strong></div>
+            <div><span>{{reportMode()==='impact'?'NEW AIM GRID':'NEW TARGET GRID'}}</span><strong>{{corrected.grid}}</strong></div>
             <div><span>BEARING</span><strong>{{corrected.bearing | number:'1.2-2'}}°</strong></div>
             <div><span>ELEVATION</span><strong>{{corrected.elevation | number:'1.2-2'}}°</strong></div>
             <div><span>CHARGES</span><strong>{{corrected.charges}}</strong></div>
           </div>
-        }@else{<p class="miss-hint">Choose a valid grid within the map and firing range.</p>}
+        }@else{<p class="miss-hint">Enter valid coordinates and a direction/distance within the map and firing range.</p>}
         @if(error()){<p role="alert" class="inline-error">{{error()}}</p>}
         <div class="modal-actions">
           <button type="button" class="secondary" (click)="closeModal()">CANCEL</button>

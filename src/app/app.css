@@ -125,3 +125,12 @@
  max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
  overscroll-behavior:contain}
 @media(max-width:440px){.report-bearing-inputs{grid-template-columns:1fr}}
+
+/* Three correction categories; each visible editor fits a narrow viewport. */
+.impact-offset-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:11px 0}
+.impact-offset-fields>.miss-input-label{min-width:0;display:grid;gap:5px;align-content:start}
+.impact-offset-fields>.miss-input-label>span{overflow-wrap:anywhere}
+.impact-offset-fields input,.impact-offset-fields select{width:100%;box-sizing:border-box;min-width:0;min-height:43px}
+.report-confirm-grid{justify-self:start;border:1px solid #a48858;background:#403f2a;
+ border-radius:5px;color:#f3dab1;min-height:40px;padding:7px 10px;font-size:11px;font-weight:800}
+@media(max-width:470px){.impact-offset-fields{grid-template-columns:1fr}}

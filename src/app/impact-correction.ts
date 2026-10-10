@@ -55,3 +55,32 @@ export function correctFromImpact(
     newBearing:bearingDegrees(nest,aimPoint),newDistanceKm,
     charges,elevation};
 }
+
+/** Player-reported target offset measured FROM the observed shell impact.
+ * Unlike correctFromImpact, this updates the actual target coordinates.
+ */
+export interface TargetFromImpactSolution {
+  targetPosition:Point;
+  grid:string;
+  bearing:number;
+  distanceKm:number;
+  charges:number;
+  elevation:number;
+}
+export function targetFromImpact(
+  nest:Point, observedImpact:Point, bearingFromImpact:number,
+  distanceFromImpactKm:number, previousCharges:number
+):TargetFromImpactSolution|null {
+  if(!onMap(nest)||!onMap(observedImpact))return null;
+  const target=projectImpact(observedImpact,bearingFromImpact,distanceFromImpactKm);
+  if(!target)return null;
+  const range=distanceKm(nest,target);
+  if(range<=0||range>30)return null;
+  const charge=elevationAt(range,previousCharges)!==null
+    ?previousCharges:Math.ceil(range/5);
+  const elevation=elevationAt(range,charge);
+  const grid=formatGrid(target);
+  if(elevation===null||!grid)return null;
+  return {targetPosition:target,grid,bearing:bearingDegrees(nest,target),
+    distanceKm:range,charges:charge,elevation};
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {parseGrid,formatGrid} from './map-math';
+import {parseGrid,formatGrid,compassCenter} from './map-math';
 import {projectImpact,correctFromImpact} from './impact-correction';
 
 test('Calculate projects east and north by the game bearing convention',()=>{
@@ -40,4 +40,15 @@ test('outside map and invalid feedback are rejected',()=>{
   const nest=parseGrid('A1 0:0')!,target=parseGrid('A1 1:0')!;
   assert.equal(correctFromImpact(nest,target,target,'T10 9:9',1),null);
   assert.equal(correctFromImpact(nest,target,target,'Z4 0:0',1),null);
+});
+
+test('16-point compass from the shell impact repositions target and changes firing angle',()=>{
+  const nest=parseGrid('C2 5:6')!;
+  const impact=parseGrid('F2 5:6')!;
+  const heading=compassCenter('NE')!;
+  const result=targetFromImpact(nest,impact,heading,Math.sqrt(2),1)!;
+  assert.equal(result.grid,'G3 5:6');
+  assert.ok(result.bearing>70&&result.bearing<80);
+  assert.equal(result.charges,1);
+  assert.equal(compassCenter('unknown'),null);
 });
