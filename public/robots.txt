@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://halfe85.github.io/IronNest-Firingsollutioncalculator/sitemap.xml

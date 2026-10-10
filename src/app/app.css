@@ -315,3 +315,17 @@
 @media(prefers-reduced-motion:reduce){
  .shot-float-window,.shot-float-window.closing{animation-duration:1ms}
 }
+
+/* Crawlable, visible documentation link without compromising the mobile game UI. */
+.top-brand{margin:0;font-weight:inherit}
+.top-actions{display:flex;align-items:center;gap:15px;min-width:0}
+.top-guide-link{display:inline-flex;align-items:center;justify-content:center;
+  padding:6px 9px;min-height:35px;white-space:nowrap;border:1px solid #627657;
+  border-radius:5px;text-decoration:none;font-size:10px;font-weight:850;
+  letter-spacing:.4px;color:#f3d19a;background:#253126}
+.top-guide-link:hover{background:#384536}
+@media(max-width:580px){
+ .top-actions{gap:5px}
+ .top-label{display:none}
+ .top-guide-link{font-size:10px;min-height:37px}
+}

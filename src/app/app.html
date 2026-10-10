@@ -1,7 +1,10 @@
 <div class="main-container">
   <header class="top-bar">
-    <div class="top-brand"><span class="brand-dot">✦</span><strong>IRON NEST</strong><span>FCC</span></div>
-    <span class="top-label">UNOFFICIAL FIRE CONTROL</span>
+    <h1 class="top-brand"><span class="brand-dot" aria-hidden="true">✦</span><strong>IRON NEST</strong><span>FCC</span></h1>
+    <div class="top-actions">
+      <span class="top-label">UNOFFICIAL FIRE CONTROL</span>
+      <a class="top-guide-link" href="guides/firing-solutions.html" title="Iron Nest calculator guides">GUIDES ↗</a>
+    </div>
   </header>
 
   <main class="main-content" [class.shots-view]="tab()==='shots'">
@@ -267,6 +270,9 @@
       <p>Calculate projects the entered bearing and range from your Iron Nest coordinate onto the 20×10 km game grid. A missed shot can be corrected by entering either the updated target grid or the observed shell-impact grid. A vector correction updates bearing, distance and elevation while preserving the prior solution.</p>
       <p>Firing cards, observations and routes are automatically saved to session-scoped IndexedDB. Reloading this tab keeps them; a new browser session starts empty and clears previous IndexedDB records. Browsers cannot guarantee immediate deletion when the last window closes. There is no server database or login.</p>
       <div class="about-links">
+        <a href="guides/firing-solutions.html">How to use this calculator ↗</a>
+        <a href="guides/tactical-plotting.html">Tactical plotting guide ↗</a>
+        <a href="guides/moving-targets.html">Moving-target waypoints ↗</a>
         <a href="https://steamcommunity.com/app/2950790/discussions/0/588434434320143257/" target="_blank" rel="noopener noreferrer">Calculation reference ↗</a>
         <a href="https://joeoakley52.github.io/UNOFFICIAL-Iron-Nest-FCC/" target="_blank" rel="noopener noreferrer">Original calculator inspiration ↗</a>
         <a href="https://github.com/Halfe85/IronNest-Firingsollutioncalculator" target="_blank" rel="noopener noreferrer">Source code ↗</a>

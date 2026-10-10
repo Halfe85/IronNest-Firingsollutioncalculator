@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111714">
+  <title>Iron Nest Tactical Plotter: Spotter Bearings, Ranges &amp; Target Triangulation | Iron Nest FCC</title>
+  <meta name="description" content="Learn how to plot spotters and solve target grids from bearings, distance reports and compass directions in Iron Nest without mission spoilers.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/tactical-plotting.html">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="guide.css">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Iron Nest Tactical Plotter: Spotter Bearings, Ranges &amp; Target Triangulation">
+  <meta property="og:description" content="Learn how to plot spotters and solve target grids from bearings, distance reports and compass directions in Iron Nest without mission spoilers.">
+  <meta property="og:url" content="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/tactical-plotting.html">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="../">✦ IRON NEST <span>FCC</span></a>
+  <nav aria-label="Main navigation"><a class="launch" href="../">OPEN CALCULATOR ↗</a></nav>
+</header>
+<main class="article">
+  <nav class="crumb" aria-label="Breadcrumb"><a href="../">Iron Nest Calculator</a><span aria-hidden="true">›</span><span>Guides</span></nav>
+  <p class="eyebrow">FREE PLAYER GUIDE · NO STORY SPOILERS</p>
+  <h1>How to triangulate targets from Iron Nest spotter reports</h1>
+  <p class="lede">Some IRON NEST objectives describe an unknown location relative to known spotters or earlier reference points. Iron Nest FCC plots those observations geometrically so you can turn the intelligence into a grid and eventually a firing solution. The process works without mission-specific templates.</p>
+  <div class="start"><div><strong>Ready to calculate?</strong><p>Open the live game companion and follow this guide beside it.</p></div><a href="../">Launch Iron Nest FCC →</a></div>
+  <nav class="toc" aria-label="On this page"><strong>IN THIS GUIDE</strong><ol><li><a href="#step-1">Start with fixed locations</a></li><li><a href="#step-2">Add reports to references and targets</a></li><li><a href="#step-3">Why two observations may produce several answers</a></li><li><a href="#step-4">Handling impossible or approximate intersections</a></li><li><a href="#step-5">From plotted target to firing solution</a></li></ol></nav>
+  <section id="step-1"><h2>Start with fixed locations</h2><p>Open the <a href="../">Iron Nest calculator</a>, select <strong>Tactical Plotter</strong> and switch to <strong>Observation</strong>. Enter the grid position of your Iron Nest, then add each reported spotter with a known coordinate. Name spotters clearly—especially when a mission distinguishes Spotter #1 from Spotter #2.</p><p>The assumed in-game grid has columns <strong>A–T</strong> from left to right and rows <strong>1–10</strong> from bottom to top. A coordinate such as <strong>C2 5:6</strong> consists of a letter, row, and two 0–9 subdivisions. Each full cell is modeled as 1 km and each subdivision as 100 m. Verify the grid orientation on your own mission map.</p></section>
+  <section id="step-2"><h2>Add reports to references and targets</h2><p>Create a <strong>Reference</strong> or <strong>Target</strong> point. Inside its modal, add a report and choose the explicit <strong>FROM</strong> source. It might be a spotter, another reference, or an already located target. The <strong>TYPE</strong> can be:</p><ul><li><strong>Bearing</strong> — an angle measured clockwise from north, such as 077°.</li><li><strong>Range</strong> — the distance in kilometres, such as 5.73 km.</li><li><strong>Compass</strong> — a direction such as NE, SSW or WNW; this is less precise than a numerical bearing.</li></ul><p>Save each source accurately. “077° from Spotter 1” and “077° from Spotter 2” define entirely different lines.</p></section>
+  <section id="step-3"><h2>Why two observations may produce several answers</h2><p>Two forward bearing lines often meet at one point, if they intersect at all. A bearing ray and distance circle can intersect <strong>twice</strong>, once, or not at all. Two distance circles can likewise produce zero, one or two candidates.</p><p>When the tool finds multiple valid points, inspect the plotted candidates and use any additional report to determine which candidate matches your intelligence. Do not assume the first candidate is correct. Subsequent dependent reference points remain uncertain until you select a location.</p></section>
+  <section id="step-4"><h2>Handling impossible or approximate intersections</h2><p>Game reports and plotted coordinates can contain small rounding differences. When a bearing narrowly misses a reported distance circle within the solver's defined tolerance, the tool can produce an <strong>estimated location marked ≈</strong>. That approximation also affects targets derived from the reference.</p><p>But some contradictions are not ordinary rounding: two bearing rays may only intersect <strong>behind the observers</strong>, run nearly parallel, or point to a location outside the playable map. The solver reports a conflict instead of inventing a target. Check that bearings belong to the correct spotters, that coordinates were entered correctly, and that the reported numbers were transcribed accurately. It does not secretly swap bearings or reverse them.</p></section>
+  <section id="step-5"><h2>From plotted target to firing solution</h2><p>Once a target is located, open its point modal, select the shell and cannon, then use <strong>Fire Solution</strong>. The app calculates the distance and bearing <strong>from Iron Nest to that target</strong>, followed by the required charge and elevation. A located point is an estimate based on observations, so confirm the position against the game if there is uncertainty.</p><p>For a moving target that changes position with the in-game clock, use <a href="moving-targets.html">Waypoint mode</a> instead of treating its last sighting as stationary. For the underlying firing-angle equation, see the <a href="firing-solutions.html">firing solution guide</a>.</p></section>
+  <aside class="disclaimer"><strong>Unofficial tool.</strong> IRON NEST is a video game. This calculator and its community-derived equations are for gameplay only. Rounding, map orientation and flight-time estimates can differ from what you observe in-game.</aside>
+  <section class="related"><h2>More Iron Nest guides</h2><ul><li><a href="firing-solutions.html">How to calculate elevation and powder charges in IRON NEST →</a></li><li><a href="moving-targets.html">Planning waypoint interception for moving Iron Nest targets →</a></li></ul></section>
+</main>
+<footer class="footer"><a href="../">Iron Nest FCC calculator</a> · <a href="https://github.com/Halfe85/IronNest-Firingsollutioncalculator">Open-source project</a><p>Unofficial fan-made companion. No ads, subscriptions or user accounts.</p></footer>
+</body>
+</html>

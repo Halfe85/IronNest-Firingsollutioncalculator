@@ -184,3 +184,23 @@ To enable it on a fork, go to **Settings → Pages → Build and deployment** an
 - [Unofficial Iron Nest FCC by Joe Oakley](https://joeoakley52.github.io/UNOFFICIAL-Iron-Nest-FCC/) — inspiration for this independent implementation
 
 **Disclaimer:** Iron Nest FCC is a fan-made game companion, not affiliated with or endorsed by the game's developer or publisher. All firing mathematics here are for the video game only.
+
+## Free search discoverability
+
+This is a static GitHub Pages project, so discoverability improvements require **no paid hosting, advertising, SEO service, Google account subscription or custom domain**.
+
+- The Angular homepage has an optimized title, description, canonical URL, Open Graph tags, visible heading and `WebApplication` structured data.
+- Three **static HTML guides** load without JavaScript: [firing solutions](https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/firing-solutions.html), [tactical plotting](https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/tactical-plotting.html), and [moving-target waypoints](https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/moving-targets.html). These link to the calculator and each other.
+- The sitemap is published at [sitemap.xml](https://halfe85.github.io/IronNest-Firingsollutioncalculator/sitemap.xml). Angular's `public/` assets are copied into the GitHub Pages build automatically; no new deploy service is needed.
+- `public/robots.txt` is published within the project URL, **but search engines read robots rules from the hostname root** (`https://halfe85.github.io/robots.txt`), not from a project subdirectory. We cannot set that root robots file from this project repo. Submit the project sitemap through Google Search Console instead.
+
+### Google Search Console (owner action)
+
+1. Open [Search Console](https://search.google.com/search-console/) (free). Add the **URL-prefix property** `https://halfe85.github.io/IronNest-Firingsollutioncalculator/` (include trailing slash).
+2. Use the displayed **HTML tag** verification method. Paste the exact generated meta tag into `src/index.html`, deploy, then click Verify. Do **not** guess or reuse someone else's verification token.
+3. Use **URL Inspection → Request indexing** for the homepage. Inspect any excluded guides, if necessary.
+4. Open **Sitemaps** and submit `https://halfe85.github.io/IronNest-Firingsollutioncalculator/sitemap.xml`.
+5. Review indexing status and search queries after Google has had time to crawl the site.
+
+Indexing and ranking are different. A sitemap and metadata help discovery; they do not guarantee first-page ranking or even indexing. Genuine player references and useful links are more valuable long-term than keyword stuffing.
+

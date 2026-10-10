@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111714">
+  <title>Iron Nest Firing Solution Calculator: Elevation, Range &amp; Powder Charges | Iron Nest FCC</title>
+  <meta name="description" content="A practical, spoiler-free guide to calculating in-game bearing, firing elevation, powder charges and correcting a missed shot in Iron Nest.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/firing-solutions.html">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="guide.css">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Iron Nest Firing Solution Calculator: Elevation, Range &amp; Powder Charges">
+  <meta property="og:description" content="A practical, spoiler-free guide to calculating in-game bearing, firing elevation, powder charges and correcting a missed shot in Iron Nest.">
+  <meta property="og:url" content="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/firing-solutions.html">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="../">✦ IRON NEST <span>FCC</span></a>
+  <nav aria-label="Main navigation"><a class="launch" href="../">OPEN CALCULATOR ↗</a></nav>
+</header>
+<main class="article">
+  <nav class="crumb" aria-label="Breadcrumb"><a href="../">Iron Nest Calculator</a><span aria-hidden="true">›</span><span>Guides</span></nav>
+  <p class="eyebrow">FREE PLAYER GUIDE · NO STORY SPOILERS</p>
+  <h1>How to calculate elevation and powder charges in IRON NEST</h1>
+  <p class="lede">This guide explains the community-reported firing equation used by Iron Nest FCC, how to turn bearing and range into a firing card, and what to do if your shell misses. These calculations are only for the game, not real artillery.</p>
+  <div class="start"><div><strong>Ready to calculate?</strong><p>Open the live game companion and follow this guide beside it.</p></div><a href="../">Launch Iron Nest FCC →</a></div>
+  <nav class="toc" aria-label="On this page"><strong>IN THIS GUIDE</strong><ol><li><a href="#step-1">Find the information you need</a></li><li><a href="#step-2">The elevation formula</a></li><li><a href="#step-3">Bearing, grid and shell type</a></li><li><a href="#step-4">Save and use a firing solution</a></li><li><a href="#step-5">What the result does not guarantee</a></li></ol></nav>
+  <section id="step-1"><h2>Find the information you need</h2><p>Before starting, note the <strong>Iron Nest grid</strong>, the <strong>target bearing in degrees</strong>, and the <strong>distance in kilometres</strong>. You can obtain the bearing and distance directly from mission intelligence, or locate the target first in the <a href="tactical-plotting.html">Tactical Plotter guide</a> when the reports name multiple spotters.</p><p>Open <a href="../">Iron Nest FCC</a> and choose <strong>Calculate</strong>. Confirm the Iron Nest grid using the letter, row, and two subcell selectors. Enter bearing and distance, select the shell and left or right cannon, then check the displayed result.</p></section>
+  <section id="step-2"><h2>The elevation formula</h2><p>The implemented, community-reported game rule is:</p><div class="formula">Elevation (degrees) = distance (km) × 12 ÷ powder charges</div><p>For example, for a target <strong>12 km</strong> away using <strong>3 charges</strong>, elevation is <strong>48°</strong>. For 10 km with two charges, elevation reaches the game's <strong>60°</strong> maximum.</p><p>The calculator offers <strong>1–6 powder charges</strong>, with a maximum modeled reach of <strong>5 km per charge</strong>. Selecting Auto uses the lowest charge that can reach the entered range. Select a charge manually if the mission or your firing plan calls for a different valid angle.</p></section>
+  <section id="step-3"><h2>Bearing, grid and shell type</h2><p><strong>Bearing</strong> is a compass direction, not elevation. In the app, 0° points north, 90° east, 180° south and 270° west. If your Iron Nest location has been confirmed, the calculator can also project the entered bearing and range to an approximate target grid.</p><p>Choose the correct <strong>shell type</strong> from the list and assign a <strong>Left</strong> or <strong>Right</strong> cannon. The shell label is retained with the solution; shell selection does not change the shared elevation equation. Read mission instructions to decide which ammunition is appropriate.</p></section>
+  <section id="step-4"><h2>Save and use a firing solution</h2><p>Press <strong>+ FIRE SOLUTION</strong> to save a card in the <strong>Fire Solutions</strong> workspace. It shows bearing, elevation, charges, shell, cannon and the projected grid. The compact card expands on hover on a desktop or on tap on a phone.</p><p>Press <strong>HIT</strong> to archive a confirmed target under Neutralized. If you miss, press <strong>MISS</strong> to open the correction tool. A report can set a new target grid, provide a new bearing and distance from Iron Nest, record the observed shell-impact grid, or describe the target by bearing and distance <em>from the impact point</em>. These are different types of correction and should not be confused.</p></section>
+  <section id="step-5"><h2>What the result does not guarantee</h2><p>Game coordinates are rounded to map subdivisions of roughly 100 m, and some intelligence reports are only approximate. The displayed grid may not be the exact impact point. A calculated elevation does not by itself determine <strong>shell flight time</strong>; the app treats that separately when planning moving-target shots.</p><p>For multi-spotter observations and uncertain targets, use the <a href="tactical-plotting.html">spotter triangulation guide</a>. For a timed train or moving ship, see the <a href="moving-targets.html">waypoint interception guide</a>.</p></section>
+  <aside class="disclaimer"><strong>Unofficial tool.</strong> IRON NEST is a video game. This calculator and its community-derived equations are for gameplay only. Rounding, map orientation and flight-time estimates can differ from what you observe in-game.</aside>
+  <section class="related"><h2>More Iron Nest guides</h2><ul><li><a href="tactical-plotting.html">How to triangulate targets from Iron Nest spotter reports →</a></li><li><a href="moving-targets.html">Planning waypoint interception for moving Iron Nest targets →</a></li></ul></section>
+</main>
+<footer class="footer"><a href="../">Iron Nest FCC calculator</a> · <a href="https://github.com/Halfe85/IronNest-Firingsollutioncalculator">Open-source project</a><p>Unofficial fan-made companion. No ads, subscriptions or user accounts.</p></footer>
+</body>
+</html>

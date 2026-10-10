@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111714">
+  <title>Iron Nest Train &amp; Moving Target Calculator: Waypoints and Intercept Timing | Iron Nest FCC</title>
+  <meta name="description" content="Plan Iron Nest train and moving-target firing solutions using game-clock waypoints, spotter reference grids, bearings and estimated shell travel time.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/moving-targets.html">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="guide.css">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Iron Nest Train &amp; Moving Target Calculator: Waypoints and Intercept Timing">
+  <meta property="og:description" content="Plan Iron Nest train and moving-target firing solutions using game-clock waypoints, spotter reference grids, bearings and estimated shell travel time.">
+  <meta property="og:url" content="https://halfe85.github.io/IronNest-Firingsollutioncalculator/guides/moving-targets.html">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="../">✦ IRON NEST <span>FCC</span></a>
+  <nav aria-label="Main navigation"><a class="launch" href="../">OPEN CALCULATOR ↗</a></nav>
+</header>
+<main class="article">
+  <nav class="crumb" aria-label="Breadcrumb"><a href="../">Iron Nest Calculator</a><span aria-hidden="true">›</span><span>Guides</span></nav>
+  <p class="eyebrow">FREE PLAYER GUIDE · NO STORY SPOILERS</p>
+  <h1>Planning waypoint interception for moving Iron Nest targets</h1>
+  <p class="lede">A moving target is not always at the last grid reported by a spotter. The Waypoint planner records where a target should be at a particular game-clock time, and helps you plan the firing solution for that future location. These steps avoid mission-specific spoilers.</p>
+  <div class="start"><div><strong>Ready to calculate?</strong><p>Open the live game companion and follow this guide beside it.</p></div><a href="../">Launch Iron Nest FCC →</a></div>
+  <nav class="toc" aria-label="On this page"><strong>IN THIS GUIDE</strong><ol><li><a href="#step-1">Record the timetable before firing</a></li><li><a href="#step-2">Choose the source of each waypoint position</a></li><li><a href="#step-3">Route distance versus geometric distance</a></li><li><a href="#step-4">Game-clock interpolation and shell flight time</a></li><li><a href="#step-5">Correct, save and review</a></li></ol></nav>
+  <section id="step-1"><h2>Record the timetable before firing</h2><p>Moving-target intelligence can include an arrival station, an estimated arrival time, a rail alignment, a start position, a direction of movement or intermediate waypoints with their own timestamps. Write down the <strong>game-clock time</strong> associated with each report, not the time displayed by your phone or computer.</p><p>Open <a href="../">Iron Nest FCC</a>, select <strong>Tactical Plotter</strong> and choose <strong>Waypoint</strong>. Confirm your Iron Nest position. Set an arrival/reference grid if it is known, then add waypoints in the order the target follows them.</p></section>
+  <section id="step-2"><h2>Choose the source of each waypoint position</h2><p>The planner supports four independent position methods. <strong>Calculated</strong> uses a reference point, bearing, direction and distance. <strong>Manual</strong> uses an exact grid provided by the game. <strong>Observed</strong> combines a reported grid with the report time. <strong>Relative</strong> uses another waypoint or reference plus bearing, direction and distance.</p><p>Each waypoint has its own <strong>bearing origin</strong>. One point can be measured from an arrival station, another from a named spotter, and another from a previous waypoint. The <strong>Along / Opposite</strong> direction applies independently to each report. Avoid assuming all numbers are measured from the arrival station.</p></section>
+  <section id="step-3"><h2>Route distance versus geometric distance</h2><p>The route planner distinguishes two kinds of distance:</p><ul><li><strong>Distance from a named reference</strong> places a waypoint on the map using its bearing and offset.</li><li><strong>Distance remaining along the route</strong> is used with the timetable to estimate travel progress.</li></ul><p>These are equal on some straight routes, but different when a path turns. The map draws a segment between each known waypoint; the tool interpolates between them, so a route can bend. It cannot predict an unreported detour or change in speed.</p></section>
+  <section id="step-4"><h2>Game-clock interpolation and shell flight time</h2><p>With at least two time-stamped waypoints, a target position between their timestamps can be estimated by interpolation. The position at a future <strong>impact time</strong> is what matters—not the position where a moving vehicle was spotted earlier.</p><p>The charge-and-elevation formula does <em>not</em> determine time of flight. The planner supports manually entered flight times, and has a separate <strong>experimental community speed model</strong> when you have no measured value. Treat estimated timing as provisional and adjust using in-game firing observations.</p><p>For example, if the target is predicted to pass a location at 10:13:30 and a measured shell takes 25 seconds to arrive, the idealized launch time is 10:13:05. This is a simple arithmetic illustration, not a verified mission schedule, and it ignores any in-game firing delay you have not measured.</p></section>
+  <section id="step-5"><h2>Correct, save and review</h2><p>Review the predicted target position and firing solution before firing. Save route inputs within the current browser session, and move a predicted intercept into <strong>Fire Solutions</strong> for the selected cannon and shell. After the shot, mark <strong>HIT</strong> or use <strong>MISS</strong> to report where the shell landed or update the target's position.</p><p>Be aware that the session-scoped IndexedDB state normally survives a page refresh, but is intended to start fresh in a new browser session; deleting the browser's site data also clears it. See the <a href="firing-solutions.html">firing correction guide</a> and the <a href="tactical-plotting.html">spotter triangulation guide</a> for related workflows.</p></section>
+  <aside class="disclaimer"><strong>Unofficial tool.</strong> IRON NEST is a video game. This calculator and its community-derived equations are for gameplay only. Rounding, map orientation and flight-time estimates can differ from what you observe in-game.</aside>
+  <section class="related"><h2>More Iron Nest guides</h2><ul><li><a href="firing-solutions.html">How to calculate elevation and powder charges in IRON NEST →</a></li><li><a href="tactical-plotting.html">How to triangulate targets from Iron Nest spotter reports →</a></li></ul></section>
+</main>
+<footer class="footer"><a href="../">Iron Nest FCC calculator</a> · <a href="https://github.com/Halfe85/IronNest-Firingsollutioncalculator">Open-source project</a><p>Unofficial fan-made companion. No ads, subscriptions or user accounts.</p></footer>
+</body>
+</html>
