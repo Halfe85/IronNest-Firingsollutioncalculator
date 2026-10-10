@@ -8,6 +8,7 @@ import {projectImpact,correctFromImpact,targetFromImpact,initialFiringGrid} from
 import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
+import {splitFiringCards,nextActiveFiringCard} from './shot-status';
 
 type Tab='calc'|'plot'|'shots';
 type ShotState='pending'|'hit'|'miss';
@@ -30,7 +31,7 @@ interface ShotCard{
   initialFiringGrid?:string|null;
   revisions?:ShotRevision[];
   lastReport?:{grid:string;kind:GridCorrectionMode;impactGrid?:string}|null;
-  state:ShotState;missKm:number|null;
+  state:ShotState;missKm:number|null;hitAt?:string|null;
 }
 function uid():string {
   return typeof crypto!=='undefined'&&'randomUUID' in crypto?
@@ -62,6 +63,17 @@ export class AppComponent {
   readonly predictedGrid=computed(()=>this.predictedTarget()
     ?formatGrid(this.predictedTarget()!):null);
   readonly shots=signal<ShotCard[]>([]);
+  readonly shotView=signal<'active'|'neutralized'>('active');
+  /** Briefly keep the completed card in the active deck for a fade-out. */
+  readonly fadingHitId=signal<string|null>(null);
+  readonly unresolvedShots=computed(()=>splitFiringCards(this.shots()).active);
+  readonly activeShots=computed(()=>{
+    const active=this.unresolvedShots();
+    const fading=this.shots().find(s=>s.id===this.fadingHitId()&&s.state==='hit');
+    return fading?[fading,...active]:active;
+  });
+  readonly neutralizedShots=computed(()=>splitFiringCards(this.shots()).neutralized);
+  private hitFadeTimer:ReturnType<typeof setTimeout>|null=null;
   readonly hydrated=signal(false);
   readonly activeShotId=signal<string|null>(null);
   readonly modal=signal<'about'|'miss'|null>(null);
@@ -167,7 +179,8 @@ export class AppComponent {
     return charges===null||!Number.isFinite(b)||b<0||b>360?
       null:elevationAt(this.manualDistance(),charges);
   });
-  readonly activeShot=computed(()=>this.shots().find(s=>s.id===this.activeShotId())??null);
+  readonly activeShot=computed(()=>
+    this.shots().find(s=>s.id===this.activeShotId()&&s.state!=='hit')??null);
   readonly bottomSolution=computed(()=>{
     if(this.tab()==='calc'&&this.elevation()!==null)
       return {charge:this.currentCharges()!,elevation:this.elevation()!};
@@ -228,17 +241,22 @@ export class AppComponent {
             lastReport:s.lastReport??null
           })));
       }
-      if(typeof data.activeShotId==='string'&&
-        this.shots().some(s=>s.id===data.activeShotId))this.activeShotId.set(data.activeShotId);
+      this.activeShotId.set(nextActiveFiringCard(this.shots(),
+        typeof data.activeShotId==='string'?data.activeShotId:null));
     }finally{this.hydrated.set(true);}
   }
   clearFiringSolutions():void{
+    this.stopHitFade();
     this.shots.set([]);this.activeShotId.set(null);
     this.selectedMissShot.set(null);this.modal.set(null);this.error.set('');
+    this.shotView.set('active');
   }
   @HostListener('document:keydown.escape')
   closeModal():void{this.modal.set(null);this.selectedMissShot.set(null);}
   selectTab(tab:Tab):void{this.tab.set(tab);this.error.set('');}
+  selectShotView(view:'active'|'neutralized'):void{
+    if(view==='active'||this.neutralizedShots().length>0)this.shotView.set(view);
+  }
   setChargeMode(value:string):void{this.chargeMode.set(Number(value));}
   setCannon(value:string):void {
     const side=cannonOrUnassigned(value);
@@ -270,7 +288,8 @@ export class AppComponent {
       state:'pending',missKm:null
     };
     this.shots.update(rows=>[shot,...rows].slice(0,200));
-    this.activeShotId.set(shot.id);this.tab.set('shots');this.error.set('');
+    this.activeShotId.set(shot.id);this.shotView.set('active');
+    this.tab.set('shots');this.error.set('');
   }
   addManual():void{
     const charge=this.currentCharges();
@@ -288,9 +307,23 @@ export class AppComponent {
     this.makeShot({...data,charges:charge,shell:data.shell,cannon:data.cannon,
       nestPosition:origin,targetPosition:target});
   }
+  private stopHitFade():void{
+    if(this.hitFadeTimer!==null)clearTimeout(this.hitFadeTimer);
+    this.hitFadeTimer=null;
+    this.fadingHitId.set(null);
+  }
   markHit(id:string):void{
-    this.shots.update(rows=>rows.map(s=>s.id===id?{...s,state:'hit',missKm:null}:s));
-    this.activeShotId.set(id);
+    if(!this.shots().some(s=>s.id===id&&s.state!=='hit'))return;
+    this.stopHitFade();
+    this.fadingHitId.set(id);
+    const hitAt=new Date().toISOString();
+    this.shots.update(rows=>rows.map(s=>s.id===id?
+      {...s,state:'hit' as ShotState,hitAt,missKm:null}:s));
+    this.activeShotId.set(nextActiveFiringCard(this.shots(),this.activeShotId()));
+    this.shotView.set('active');
+    // The state change is saved immediately. Only the outgoing visual card
+    // remains for 240 ms, then the neutralized deck owns it exclusively.
+    this.hitFadeTimer=setTimeout(()=>this.stopHitFade(),240);
   }
   openMiss(id:string):void{
     const shot=this.shots().find(s=>s.id===id);
@@ -378,11 +411,17 @@ export class AppComponent {
       nestPosition:shot.nestPosition,targetPosition:shot.aimPosition});
   }
   removeShot(id:string):void{
+    if(this.fadingHitId()===id)this.stopHitFade();
     this.shots.update(rows=>rows.filter(s=>s.id!==id));
-    if(this.activeShotId()===id)this.activeShotId.set(this.shots()[0]?.id??null);
+    this.activeShotId.set(nextActiveFiringCard(this.shots(),this.activeShotId()));
+    if(!this.neutralizedShots().length)this.shotView.set('active');
   }
   resetReport(shot:ShotCard):void{
-    this.shots.update(rows=>rows.map(s=>s.id===shot.id?{...s,state:'pending',missKm:null}:s));
+    if(this.fadingHitId()===shot.id)this.stopHitFade();
+    this.shots.update(rows=>rows.map(s=>s.id===shot.id?{
+      ...s,state:'pending' as ShotState,hitAt:null,missKm:null}:s));
+    this.activeShotId.set(shot.id);
+    this.shotView.set('active');
   }
   openAbout():void{this.modal.set('about');}
 }

@@ -134,3 +134,73 @@
 .report-confirm-grid{justify-self:start;border:1px solid #a48858;background:#403f2a;
  border-radius:5px;color:#f3dab1;min-height:40px;padding:7px 10px;font-size:11px;font-weight:800}
 @media(max-width:470px){.impact-offset-fields{grid-template-columns:1fr}}
+
+/* Firing control: active targets fill the viewport; neutralized cards dock
+   above the global footer on desktop. The two decks become tabs on mobile. */
+.main-content.shots-view{display:flex;flex-direction:column;overflow:hidden}
+.shots-view>.main-tabs{flex:none}
+.shots-tab-content{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding-bottom:8px}
+.shots-workspace{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1}
+.shots-workspace .shots-header{width:100%;flex:none}
+.shots-active-panel{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#526952 transparent}
+.shots-neutralized-dock{flex:none;max-height:min(40dvh,400px);overflow-y:auto;
+ overscroll-behavior:contain;margin-top:10px;padding:9px 0 4px;
+ border-top:2px solid #575e58;background:#161d1a;
+ scrollbar-width:thin;scrollbar-color:#626a65 transparent}
+.shots-neutralized-dock .shot-tiles{padding-bottom:5px}
+.neutralized-heading{max-width:1150px;margin:0 auto 9px;display:flex;
+ align-items:center;justify-content:space-between;gap:8px}
+.neutralized-heading strong{font-size:11px;letter-spacing:1px;color:#c6cbca}
+.neutralized-heading span{font-size:9px;color:#919b99;font-weight:800}
+.shot-status-tabs{display:none}
+.shot-tile.shot-hit,.shot-tile.shot-hit.shot-selected{
+ background:#272b2b;border-color:#616967;color:#c5c8c8}
+.shot-hit .shot-heading,.shot-hit .shot-heading small{color:#adb5b3}
+.shot-hit .shot-heading span{color:#dee0df}
+.shot-hit .shot-primary>div,.shot-hit .shot-secondary>div{
+ background:#222728;border-color:#454c4d}
+.shot-hit .shot-primary strong,.shot-hit .shot-secondary strong,
+.shot-hit .shot-grid-details strong{color:#bfc5c3}
+.shot-hit .shot-primary span,.shot-hit .shot-secondary span,.shot-hit .shot-cannon>span,
+.shot-hit .shot-grid-details>span,.shot-hit .shot-grid-details small{color:#87918f}
+.shot-hit .shot-grid-details{border-top-color:#515a58}
+.shot-hit .shot-cannon-controls button,.shot-hit .shot-cannon-controls button.active{
+ background:#303736;border-color:#565f5d;color:#b6bebc}
+.shot-hit .shot-cannon-controls button.active{background:#4b5553;color:#e0e3e2}
+.shot-hit .shot-remove{background:#333a39;border-color:#56615e;color:#ced4d1}
+.shot-actions .success-btn,.shot-actions .miss-btn{font-size:12px;letter-spacing:.8px;
+ min-height:43px;font-weight:900}
+.shot-actions .restore-btn{min-height:43px;width:100%;flex:1;
+ border:1px solid #858f8b;border-radius:6px;background:#393f3e;
+ color:#e2e7e4;font-size:11px;font-weight:850;letter-spacing:.5px}
+.shot-tile.shot-fading{pointer-events:none;animation:shot-hit-exit 240ms ease-out forwards}
+@keyframes shot-hit-exit{
+ from{opacity:1;transform:translateY(0)}
+ to{opacity:0;transform:translateY(12px)}
+}
+@media (prefers-reduced-motion:reduce){
+ .shot-tile.shot-fading{animation:none;opacity:0}
+}
+@media(max-width:600px){
+ .main-content.shots-view{display:block;overflow-y:auto}
+ .shots-tab-content{display:block;overflow:visible;min-height:auto;padding-bottom:16px}
+ .shots-workspace{display:block;min-height:0}
+ .shot-status-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+   gap:6px;margin:0 auto 10px;max-width:1150px}
+ .shot-status-tabs button{min-width:0;min-height:45px;display:flex;
+   justify-content:center;align-items:center;gap:5px;padding:8px 5px;
+   border-radius:6px;border:1px solid #495c4c;background:#1a281e;
+   color:#bccbbb;font-size:10px;font-weight:900;letter-spacing:.25px}
+ .shot-status-tabs button.active{border-color:#dec089;background:#4c422c;color:#ffe5b8}
+ .shot-tab-count{border-radius:9px;padding:2px 5px;background:#3f4c40;
+   font-size:10px;font-variant-numeric:tabular-nums}
+ .shot-status-tabs button.active .shot-tab-count{background:#766241}
+ .shots-active-panel{overflow:visible;max-height:none;min-height:0}
+ .shots-neutralized-dock{max-height:none;overflow:visible;border-top:0;
+   margin:0;padding:0;background:transparent}
+ .shots-workspace .mobile-hidden{display:none}
+ .neutralized-heading{padding:1px 1px 9px}
+ .shot-actions .success-btn,.shot-actions .miss-btn{font-size:11px}
+ .shot-tile.shot-fading{animation:shot-hit-exit 240ms ease-out forwards}
+}

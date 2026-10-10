@@ -82,7 +82,12 @@ You can save and reopen multiple routes **within the current browser session**.
 
 ### Fire Solutions and missed shots
 
-Saved firing cards show the selected target, bearing, elevation, charges, shell, cannon and grid. Select **✓** for a hit or **×** to open the missed-shot correction dialog.
+Saved firing cards show the target, bearing, elevation, charges, shell, cannon and grid. Each active card has two clearly labeled actions: **HIT** and **MISS**.
+
+- **HIT** marks the target **NEUTRALIZED**, greys out its card and archives it beneath the active firing solutions on desktop. Neutralized cards stay in a scrollable dock at the bottom of the Fire Solutions viewport.
+- On phones, a hit card **fades out of Active Targets**, and a **NEUTRALIZED** tab appears next to **ACTIVE TARGETS**. Only one deck is shown at a time.
+- A neutralized card can be **RESTORED TO ACTIVE** if it was marked as hit by mistake. HIT status and its completion timestamp are saved with the card for the current browser session.
+- **MISS** opens the missed-shot correction dialog; correcting a miss keeps the card active.
 
 The dialog has **three report categories**:
 

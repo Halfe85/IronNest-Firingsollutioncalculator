@@ -4,14 +4,14 @@
     <span class="top-label">UNOFFICIAL FIRE CONTROL</span>
   </header>
 
-  <main class="main-content">
+  <main class="main-content" [class.shots-view]="tab()==='shots'">
     <nav class="main-tabs" aria-label="Fire control modes">
       <button type="button" [class.active]="tab()==='calc'" (click)="selectTab('calc')">Calculate</button>
       <button type="button" [class.active]="tab()==='plot'" (click)="selectTab('plot')">Tactical Plotter</button>
       <button type="button" [class.active]="tab()==='shots'" (click)="selectTab('shots')">Fire Solutions <span class="tab-count">{{shots().length}}</span></button>
     </nav>
 
-    <div class="tab-content">
+    <div class="tab-content" [class.shots-tab-content]="tab()==='shots'">
       @if(tab()==='calc'){
         <section class="compact-calculator">
           <div class="calc-nest">
@@ -59,17 +59,68 @@
         <app-tactical-plotter (fireSolution)="addFromPlot($event)"></app-tactical-plotter>
       }
       @if(tab()==='shots'){
-        <section class="shots-header"><span>FIRE SOLUTIONS</span><small>{{shots().length}} SAVED · LOCAL DEVICE</small></section>
-        @if(!shots().length){
-          <div class="empty-shots"><strong>No firing solutions yet.</strong><p>Use Calculate or select a plotted target to add one.</p></div>
-        }
-        <div class="shot-tiles">
-          @for(shot of shots();track shot.id){
-            <article class="shot-tile" [class.shot-selected]="activeShotId()===shot.id" [class.shot-hit]="shot.state==='hit'" [class.shot-miss]="shot.state==='miss'">
+        <section class="shots-workspace" aria-label="Firing solutions">
+          <section class="shots-header">
+            <span>FIRE SOLUTIONS</span>
+            <small>{{unresolvedShots().length}} ACTIVE · {{neutralizedShots().length}} NEUTRALIZED</small>
+          </section>
+          @if(neutralizedShots().length>0){
+            <nav class="shot-status-tabs" role="tablist" aria-label="Firing solution status">
+              <button type="button" role="tab" id="shots-tab-active" aria-controls="shots-panel-active"
+                [class.active]="shotView()==='active'"
+                [attr.aria-selected]="shotView()==='active'"
+                (click)="selectShotView('active')">ACTIVE TARGETS
+                <span class="shot-tab-count">{{unresolvedShots().length}}</span>
+              </button>
+              <button type="button" role="tab" id="shots-tab-neutralized" aria-controls="shots-panel-neutralized"
+                [class.active]="shotView()==='neutralized'"
+                [attr.aria-selected]="shotView()==='neutralized'"
+                (click)="selectShotView('neutralized')">NEUTRALIZED
+                <span class="shot-tab-count">{{neutralizedShots().length}}</span>
+              </button>
+            </nav>
+          }
+          <section class="shots-active-panel" id="shots-panel-active"
+            role="tabpanel" aria-labelledby="shots-tab-active"
+            [class.mobile-hidden]="shotView()==='neutralized'">
+            @if(!unresolvedShots().length && !fadingHitId()){
+              <div class="empty-shots">
+                @if(neutralizedShots().length){
+                  <strong>All targets neutralized.</strong>
+                  <p>Switch to NEUTRALIZED to review resolved firing solutions.</p>
+                }@else{
+                  <strong>No active firing solutions.</strong>
+                  <p>Use Calculate or select a plotted target to add one.</p>
+                }
+              </div>
+            }
+            <div class="shot-tiles">
+              @for(shot of activeShots();track shot.id){
+                <ng-container *ngTemplateOutlet="shotCard;context:{$implicit:shot}"></ng-container>
+              }
+            </div>
+          </section>
+          @if(neutralizedShots().length>0){
+            <section class="shots-neutralized-dock" id="shots-panel-neutralized"
+              role="tabpanel" aria-labelledby="shots-tab-neutralized"
+              [class.mobile-hidden]="shotView()==='active'">
+              <div class="neutralized-heading">
+                <strong>NEUTRALIZED</strong>
+                <span>{{neutralizedShots().length}} HIT · MISSION LOG</span>
+              </div>
+              <div class="shot-tiles resolved-shot-tiles">
+                @for(shot of neutralizedShots();track shot.id){
+                  <ng-container *ngTemplateOutlet="shotCard;context:{$implicit:shot}"></ng-container>
+                }
+              </div>
+            </section>
+          }
+          <ng-template #shotCard let-shot>
+            <article class="shot-tile" [class.shot-fading]="fadingHitId()===shot.id" [class.shot-selected]="activeShotId()===shot.id" [class.shot-hit]="shot.state==='hit'" [class.shot-miss]="shot.state==='miss'">
               <div class="shot-head">
                 <button type="button" class="shot-heading" (click)="activeShotId.set(shot.id)" [attr.aria-label]="'Select '+shot.label">
                   <span>{{shot.label}}</span>
-                  <small>{{shot.state==='pending'?'PENDING':shot.state==='hit'?'SUCCESS':'MISSED'}}</small>
+                  <small>{{shot.state==='hit'?'NEUTRALIZED':shot.state==='pending'?'PENDING':'MISSED'}}</small>
                 </button>
                 <button class="shot-remove" type="button" (click)="removeShot(shot.id)" [attr.aria-label]="'Delete '+shot.label">×</button>
               </div>
@@ -102,15 +153,19 @@
                 </div>
               </div>
               <div class="shot-actions">
-                <button type="button" class="success-btn" (click)="markHit(shot.id)" [attr.aria-label]="'Mark '+shot.label+' as successful'">✓</button>
-                <button type="button" class="miss-btn" (click)="openMiss(shot.id)" [attr.aria-label]="'Report miss for '+shot.label">×</button>
                 @if(shot.state==='hit'){
-                  <button type="button" class="retry-btn" (click)="resetReport(shot)">RESET</button>
+                  <button type="button" class="restore-btn" (click)="resetReport(shot)"
+                    [attr.aria-label]="'Restore '+shot.label+' to active targets'">RESTORE TO ACTIVE</button>
+                }@else{
+                  <button type="button" class="success-btn" (click)="markHit(shot.id)"
+                    [attr.aria-label]="'Mark '+shot.label+' as hit and neutralized'">HIT</button>
+                  <button type="button" class="miss-btn" (click)="openMiss(shot.id)"
+                    [attr.aria-label]="'Report miss for '+shot.label">MISS</button>
                 }
               </div>
             </article>
-          }
-        </div>
+          </ng-template>
+        </section>
       }
       @if(error()){<div role="alert" class="inline-error">{{error()}}</div>}
     </div>
