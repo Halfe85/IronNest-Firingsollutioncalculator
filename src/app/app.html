@@ -204,6 +204,9 @@
           <div class="report-grid-input">
             <span>ACTUAL SHELL IMPACT GRID · STARTING POINT</span>
             <app-grid-select [value]="impactOriginGrid()" (valueChange)="setImpactOriginGrid($event)"></app-grid-select>
+            @if(impactOriginConfirmed()){
+              <small>Pre-filled from the original firing solution. Adjust this grid if the shell landed elsewhere.</small>
+            }
             @if(!impactOriginConfirmed()){
               <button type="button" class="report-confirm-grid"
                 (click)="impactOriginConfirmed.set(true)">CONFIRM A1 0:0</button>

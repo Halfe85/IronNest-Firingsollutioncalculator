@@ -92,7 +92,7 @@ The dialog has **three report categories**:
 | **2. Observed shell impact** | Enter where the shell landed. Keep the intended target, but offset the next aiming point by the observed shell error. |
 | **3. Target correction from impact** | Enter the **actual shell-impact grid**, then the **bearing (degrees) or 16-point compass direction** and **distance from impact to the target**. Calculate the corrected target grid and firing solution from Iron Nest. |
 
-Category 3 needs a known shell-impact position; it cannot infer one from the old aiming point. If a previous shell-impact report exists on the same firing card, that grid is offered as the starting point. The target-from-impact method moves the **target itself**; category 2 instead compensates for **shell deviation**.
+Category 3 pre-fills the **impact grid selector with the original firing solution's aimed grid**, so operators can adjust the coordinates instead of re-entering them. This is only a starting estimate, **not a confirmed observed impact**; correct it to the actual impact grid if the shell landed elsewhere. The original starting grid remains unchanged after later corrections. Older session cards recover it from the first recorded correction where possible. The target-from-impact method moves the **target itself**; category 2 instead compensates for **shell deviation**.
 
 Corrections update the existing firing card and retain a limited revision history, including the impact origin and reported direction for category 3. These are game-map approximations, not calibrated shell-dispersion models. Corrections outside the map or available charge range are rejected.
 

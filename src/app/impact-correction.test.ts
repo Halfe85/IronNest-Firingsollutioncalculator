@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {parseGrid,formatGrid,compassCenter} from './map-math';
-import {projectImpact,correctFromImpact,targetFromImpact} from './impact-correction';
+import {projectImpact,correctFromImpact,targetFromImpact,initialFiringGrid} from './impact-correction';
 
 test('Calculate projects east and north by the game bearing convention',()=>{
   const nest=parseGrid('C2 5:6')!;
@@ -51,4 +51,36 @@ test('16-point compass from the shell impact repositions target and changes firi
   assert.ok(result.bearing>70&&result.bearing<80);
   assert.equal(result.charges,1);
   assert.equal(compassCenter('unknown'),null);
+});
+
+test('category 3 begins at the first firing solution grid, not a later corrected aim',()=>{
+  const nest=parseGrid('C2 5:6')!;
+  const first=parseGrid('F2 5:6')!;
+  const corrected=parseGrid('G3 5:6')!;
+  assert.equal(initialFiringGrid({
+    initialFiringGrid:'F2 5:6',nestPosition:nest,
+    targetPosition:corrected,aimPosition:corrected,
+    bearing:70,distanceKm:6.1,
+    revisions:[{oldBearing:90,oldDistanceKm:3}]
+  }),'F2 5:6');
+  assert.equal(formatGrid(first),'F2 5:6');
+});
+test('legacy corrected cards reconstruct initial shot grid from earliest revision',()=>{
+  const nest=parseGrid('C2 5:6')!;
+  assert.equal(initialFiringGrid({
+    nestPosition:nest,aimPosition:parseGrid('G3 5:6')!,
+    targetPosition:parseGrid('G3 5:6')!,
+    bearing:70,distanceKm:6.1,
+    revisions:[
+      {oldBearing:90,oldDistanceKm:3},
+      {oldBearing:80,oldDistanceKm:4}
+    ]
+  }),'F2 5:6');
+});
+test('uncorrected legacy shots use stored aiming point, and missing positions remain unconfirmed',()=>{
+  assert.equal(initialFiringGrid({
+    nestPosition:parseGrid('C2 5:6')!,aimPosition:parseGrid('F2 5:6')!,
+    bearing:90,distanceKm:3
+  }),'F2 5:6');
+  assert.equal(initialFiringGrid({bearing:90,distanceKm:3}),null);
 });

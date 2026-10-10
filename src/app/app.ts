@@ -4,7 +4,7 @@ import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter
 import {GridSelectComponent} from './grid-select';
 import {EMPTY_GRID,gridInputFromText,gridInputLabel,gridInputToPoint,type GridInput} from './graph-math';
 import {bearingDegrees,compassCenter,DIRECTIONS,distanceKm,formatGrid,onMap,parseGrid,type Point} from './map-math';
-import {projectImpact,correctFromImpact,targetFromImpact} from './impact-correction';
+import {projectImpact,correctFromImpact,targetFromImpact,initialFiringGrid} from './impact-correction';
 import {CHARGES,SHELLS,elevationAt} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
@@ -26,6 +26,8 @@ interface ShotCard{
   nestPosition?:Point|null;
   targetPosition?:Point|null;
   aimPosition?:Point|null;
+  /** Frozen starting grid from the first firing solution, unaffected by corrections. */
+  initialFiringGrid?:string|null;
   revisions?:ShotRevision[];
   lastReport?:{grid:string;kind:GridCorrectionMode;impactGrid?:string}|null;
   state:ShotState;missKm:number|null;
@@ -221,6 +223,7 @@ export class AppComponent {
             nestPosition:s.nestPosition&&onMap(s.nestPosition)?s.nestPosition:null,
             targetPosition:s.targetPosition&&onMap(s.targetPosition)?s.targetPosition:null,
             aimPosition:s.aimPosition&&onMap(s.aimPosition)?s.aimPosition:null,
+            initialFiringGrid:s.initialFiringGrid&&parseGrid(s.initialFiringGrid)?s.initialFiringGrid:null,
             revisions:Array.isArray(s.revisions)?s.revisions.slice(-30):[],
             lastReport:s.lastReport??null
           })));
@@ -262,7 +265,8 @@ export class AppComponent {
       id:uid(),label:input.label.trim().slice(0,60)||'Target',createdAt:new Date().toISOString(),
       shell:normalizeShell(input.shell??this.shell()),bearing:input.bearing,distanceKm:input.distanceKm,
       charges:input.charges,elevation:angle,cannon:input.cannon===undefined?this.cannon():input.cannon,
-      nestPosition:origin,targetPosition:intended,aimPosition:intended,revisions:[],lastReport:null,
+      nestPosition:origin,targetPosition:intended,aimPosition:intended,
+      initialFiringGrid:formatGrid(intended),revisions:[],lastReport:null,
       state:'pending',missKm:null
     };
     this.shots.update(rows=>[shot,...rows].slice(0,200));
@@ -295,10 +299,11 @@ export class AppComponent {
     this.reportMode.set('target');this.targetInputMode.set('grid');
     this.impactDirectionFormat.set('bearing');this.impactCompass.set('N');
     this.impactBearing.set('');this.impactOffsetDistance.set('');
-    const priorImpact=shot.lastReport?.kind==='impact'?
-      shot.lastReport.grid:shot.lastReport?.impactGrid??null;
-    this.impactOriginGrid.set(gridInputFromText(priorImpact??'')??{...EMPTY_GRID});
-    this.impactOriginConfirmed.set(Boolean(priorImpact&&parseGrid(priorImpact)));
+    // Use the FIRST firing solution as the editable impact-grid starting point,
+    // even if later miss reports have already modified the current firing card.
+    const firstGrid=initialFiringGrid(shot);
+    this.impactOriginGrid.set(gridInputFromText(firstGrid??'')??{...EMPTY_GRID});
+    this.impactOriginConfirmed.set(Boolean(firstGrid));
     this.targetBearing.set(shot.bearing.toFixed(2));
     this.targetRange.set(shot.distanceKm.toFixed(3));
     const current=shot.targetPosition??(shot.nestPosition?
@@ -354,6 +359,8 @@ export class AppComponent {
       charges:preview.charges,elevation:preview.elevation,
       nestPosition:origin,targetPosition:preview.targetPosition,
       aimPosition:preview.aimPosition,
+      // Migrate old session cards before their earliest revision ages out.
+      initialFiringGrid:s.initialFiringGrid??initialFiringGrid(s),
       lastReport:{grid:reportedGrid,kind:this.reportMode(),...(impactGrid?{impactGrid}:{})},
       revisions:[...(s.revisions??[]),revision].slice(-30),
       state:'pending' as ShotState,missKm:null

@@ -84,3 +84,36 @@ export function targetFromImpact(
   return {targetPosition:target,grid,bearing:bearingDegrees(nest,target),
     distanceKm:range,charges:charge,elevation};
 }
+
+/** Grid of the initial firing solution, even after later target corrections.
+ * New shots preserve their original grid explicitly. Existing session cards
+ * without that field are reconstructed from their earliest saved correction.
+ */
+export interface OriginalFiringShot {
+  initialFiringGrid?:string|null;
+  nestPosition?:Point|null;
+  revisions?:readonly {oldBearing:number;oldDistanceKm:number}[];
+  aimPosition?:Point|null;
+  targetPosition?:Point|null;
+  bearing:number;
+  distanceKm:number;
+}
+export function initialFiringGrid(shot:OriginalFiringShot):string|null {
+  if(shot.initialFiringGrid&&parseGrid(shot.initialFiringGrid))
+    return shot.initialFiringGrid;
+  const earliest=shot.revisions?.[0];
+  if(earliest&&shot.nestPosition){
+    const first=projectImpact(shot.nestPosition,
+      earliest.oldBearing,earliest.oldDistanceKm);
+    const grid=first?formatGrid(first):null;
+    if(grid)return grid;
+  }
+  // Uncorrected historical cards lack a revision history.
+  if(shot.aimPosition&&onMap(shot.aimPosition))
+    return formatGrid(shot.aimPosition);
+  if(shot.targetPosition&&onMap(shot.targetPosition))
+    return formatGrid(shot.targetPosition);
+  const projected=shot.nestPosition?
+    projectImpact(shot.nestPosition,shot.bearing,shot.distanceKm):null;
+  return projected?formatGrid(projected):null;
+}
