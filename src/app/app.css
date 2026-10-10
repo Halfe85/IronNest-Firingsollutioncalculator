@@ -329,3 +329,9 @@
  .top-label{display:none}
  .top-guide-link{font-size:10px;min-height:37px}
 }
+
+/* Compact crawlable explanation for the default calculator workspace. */
+.calc-intro{display:grid;gap:3px}
+.calc-intro h2{font-size:14px;letter-spacing:.25px;color:#e8d5a8;
+ margin:0;font-weight:850;line-height:1.25}
+.calc-intro p{font-size:11px;line-height:1.4;color:#a7bba7;margin:0}

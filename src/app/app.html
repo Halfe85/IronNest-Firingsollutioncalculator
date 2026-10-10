@@ -17,6 +17,10 @@
     <div class="tab-content" [class.shots-tab-content]="tab()==='shots'">
       @if(tab()==='calc'){
         <section class="compact-calculator">
+          <div class="calc-intro">
+            <h2>Iron Nest Firing Solution Calculator</h2>
+            <p>Calculate elevation and powder charges by bearing and distance. Use Tactical Plotter for spotter reports and moving targets.</p>
+          </div>
           <div class="calc-nest">
             <div class="calc-nest-head"><span>IRON NEST POSITION</span>
               @if(nestConfirmed()){<strong>{{gridInputLabel(nestGrid())}}</strong>}
