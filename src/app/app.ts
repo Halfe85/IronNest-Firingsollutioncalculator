@@ -80,6 +80,8 @@ export class AppComponent {
     this.shots().find(shot=>shot.id===this.expandedShotId())??null);
   readonly expandedMobile=signal(false);
   readonly expandedClosing=signal(false);
+  /** Delete confirmation is local UI state; cards are not removed until confirmed. */
+  readonly pendingRemoveShotId=signal<string|null>(null);
   readonly expandedPlacement=signal<FloatPlacement|null>(null);
   private hoverCloseTimer:ReturnType<typeof setTimeout>|null=null;
   private expandCloseTimer:ReturnType<typeof setTimeout>|null=null;
@@ -264,6 +266,10 @@ export class AppComponent {
   }
   @HostListener('document:keydown.escape')
   closeModal():void{
+    if(this.pendingRemoveShotId()){
+      this.cancelRemoveShot();
+      return;
+    }
     if(this.modal())this.modal.set(null);
     else this.closeExpandedShot();
     this.selectedMissShot.set(null);
@@ -272,6 +278,7 @@ export class AppComponent {
   onBrowserBack():void{
     if(this.expandedMobile()&&this.expandedShotId()){
       this.mobileHistoryEntry=false;
+      this.cancelRemoveShot();
       this.startExpandedClose();
     }
   }
@@ -317,6 +324,8 @@ export class AppComponent {
     this.expandedPlacement.set(shotFloatPlacement(origin,viewport,container,mobile));
   }
   private showExpanded(id:string,anchor:HTMLElement,mobile:boolean):void{
+    // A delete prompt must not disappear when another card is hovered.
+    if(this.pendingRemoveShotId()&&this.pendingRemoveShotId()!==id)return;
     if(this.modal()||!this.shots().some(s=>s.id===id))return;
     this.clearHoverDelay();
     this.clearExpandAnimation();
@@ -355,11 +364,12 @@ export class AppComponent {
   }
   stopHoverClose():void{this.clearHoverDelay();}
   scheduleHoverClose():void{
-    if(this.expandedMobile()||this.expandedClosing())return;
+    if(this.pendingRemoveShotId()||this.expandedMobile()||this.expandedClosing())return;
     this.clearHoverDelay();
     this.hoverCloseTimer=setTimeout(()=>this.startExpandedClose(),800);
   }
   private startExpandedClose():void{
+    if(this.pendingRemoveShotId())return;
     this.clearHoverDelay();
     this.clearExpandAnimation();
     if(!this.expandedShotId())return;
@@ -373,6 +383,7 @@ export class AppComponent {
     },210);
   }
   closeExpandedShot():void{
+    this.cancelRemoveShot();
     if(!this.expandedShotId())return;
     if(this.expandedMobile()&&this.mobileHistoryEntry){
       this.mobileHistoryEntry=false;
@@ -541,7 +552,20 @@ export class AppComponent {
       shell:shot.shell,cannon:shot.cannon,
       nestPosition:shot.nestPosition,targetPosition:shot.aimPosition});
   }
-  removeShot(id:string):void{
+  requestRemoveShot(id:string):void{
+    if(!this.shots().some(shot=>shot.id===id)||this.expandedShotId()!==id)return;
+    this.clearHoverDelay();
+    this.pendingRemoveShotId.set(id);
+  }
+  cancelRemoveShot():void{
+    this.pendingRemoveShotId.set(null);
+  }
+  confirmRemoveShot(id:string):void{
+    if(this.pendingRemoveShotId()!==id)return;
+    this.cancelRemoveShot();
+    this.removeShot(id);
+  }
+  private removeShot(id:string):void{
     if(this.expandedShotId()===id)this.closeExpandedShot();
     if(this.fadingHitId()===id)this.stopHitFade();
     this.shots.update(rows=>rows.filter(s=>s.id!==id));

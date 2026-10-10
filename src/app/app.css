@@ -337,3 +337,37 @@
 .calc-intro h2{font-size:14px;letter-spacing:.25px;color:#e8d5a8;
  margin:0;font-weight:850;line-height:1.25}
 .calc-intro p{font-size:11px;line-height:1.4;color:#a7bba7;margin:0}
+
+/* An anchored confirmation expands out of the red delete X.
+   Keep the floating shot tile and its hover state intact until the green ✓. */
+.shot-head{position:relative;z-index:2}
+.shot-remove-anchor{position:relative;flex:none;z-index:3}
+.shot-delete-confirm{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:4;
+  display:grid;gap:9px;width:160px;padding:11px;
+  border:1px solid #c1aa83;border-radius:8px;
+  color:#f1e6d1;background:#263229;
+  box-shadow:0 10px 28px #000b,0 0 0 1px #e2bb7326;
+  transform-origin:top right;
+  animation:shot-delete-expand 185ms cubic-bezier(.17,.85,.3,1.1) both;
+}
+.shot-delete-prompt{
+  font-size:10px;font-weight:900;letter-spacing:1px;
+  text-align:center;white-space:nowrap;
+}
+.shot-delete-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shot-delete-choices button{
+  display:grid;place-items:center;min-height:42px;
+  border-radius:6px;font-size:22px;font-weight:900;line-height:1;
+  touch-action:manipulation;
+}
+.shot-delete-yes{background:#235a32;border:1px solid #5fbd79;color:#edfff0}
+.shot-delete-yes:hover{background:#2e7841}
+.shot-delete-no{background:#842a32;border:1px solid #d76c70;color:#fff5f5}
+.shot-delete-no:hover{background:#a83a44}
+.shot-delete-choices button:focus-visible{outline:2px solid #f4d5a1;outline-offset:2px}
+@keyframes shot-delete-expand{
+  from{opacity:0;transform:translateY(-7px) scale(.67)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@media(prefers-reduced-motion:reduce){.shot-delete-confirm{animation:none}}

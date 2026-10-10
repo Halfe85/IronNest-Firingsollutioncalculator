@@ -50,3 +50,21 @@ test('firing controls present HIT/MISS labels and mobile neutralized tabs',()=>{
   assert.match(css,/\.shot-tile\.shot-fading\{/);
   assert.match(css,/@media\(max-width:600px\)/);
 });
+
+test('shot deletion uses an animated confirmation without closing the card first',()=>{
+  const html=readFileSync(new URL('./app.html',import.meta.url),'utf8');
+  const css=readFileSync(new URL('./app.css',import.meta.url),'utf8');
+  const component=readFileSync(new URL('./app.ts',import.meta.url),'utf8');
+  assert.match(html,/\(click\)="requestRemoveShot\(shot\.id\)"/);
+  assert.doesNotMatch(html,/\(click\)="removeShot\(shot\.id\)"/);
+  assert.match(html,/pendingRemoveShotId\(\)===shot\.id/);
+  assert.match(html,/\(click\)="confirmRemoveShot\(shot\.id\)"/);
+  assert.match(html,/\(click\)="cancelRemoveShot\(\)"/);
+  assert.match(html,/shot-delete-yes/);
+  assert.match(html,/shot-delete-no/);
+  assert.match(component,/if\(this\.pendingRemoveShotId\(\)\|\|this\.expandedMobile\(\)/);
+  assert.match(component,/if\(this\.pendingRemoveShotId\(\)\)return;/);
+  assert.match(component,/if\(this\.pendingRemoveShotId\(\)!==id\)return;/);
+  assert.match(css,/@keyframes shot-delete-expand/);
+  assert.match(css,/prefers-reduced-motion:reduce/);
+});

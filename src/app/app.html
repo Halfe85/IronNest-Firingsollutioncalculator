@@ -167,7 +167,29 @@
                   <span>{{shot.label}}</span>
                   <small>{{shot.state==='hit'?'NEUTRALIZED':shot.state==='pending'?'PENDING':'MISSED'}}</small>
                 </button>
-                <button class="shot-remove" type="button" (click)="removeShot(shot.id)" [attr.aria-label]="'Delete '+shot.label">×</button>
+                <div class="shot-remove-anchor">
+                  <button class="shot-remove" type="button"
+                    (click)="requestRemoveShot(shot.id)"
+                    [attr.aria-label]="'Delete '+shot.label"
+                    [attr.aria-expanded]="pendingRemoveShotId()===shot.id"
+                    [attr.aria-controls]="'shot-delete-confirm-'+shot.id">×</button>
+                  @if(pendingRemoveShotId()===shot.id){
+                    <div class="shot-delete-confirm" [id]="'shot-delete-confirm-'+shot.id"
+                      role="group" [attr.aria-label]="'Confirm deletion of '+shot.label">
+                      <span class="shot-delete-prompt">DELETE SHOT?</span>
+                      <div class="shot-delete-choices">
+                        <button type="button" class="shot-delete-yes"
+                          (click)="confirmRemoveShot(shot.id)"
+                          [attr.aria-label]="'Confirm delete '+shot.label"
+                          title="Confirm delete">✓</button>
+                        <button type="button" class="shot-delete-no"
+                          (click)="cancelRemoveShot()"
+                          [attr.aria-label]="'Cancel delete '+shot.label"
+                          title="Cancel delete">×</button>
+                      </div>
+                    </div>
+                  }
+                </div>
               </div>
               <div class="shot-primary">
                 <div><span>BEARING</span><strong>{{shot.bearing | number:'1.2-2'}}°</strong></div>
