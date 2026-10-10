@@ -30,7 +30,9 @@
 .shot-heading span{font-size:13px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shot-heading small{font-size:9px;font-weight:750;letter-spacing:1px;color:#b8c2ae}
 .shot-hit .shot-heading small{color:#8fd4a2}.shot-miss .shot-heading small{color:#ffb59d}
-.shot-remove{flex:none;border:1px solid #5b5a4b;color:#cfbfa7;background:#263129;border-radius:5px;min-height:30px;width:30px;font-size:18px}
+.shot-remove{flex:none;border:1px solid #d76c70;color:#fff5f5;background:#842a32;border-radius:5px;min-height:30px;width:30px;font-size:18px}
+.shot-remove:hover{background:#a83a44;border-color:#f08c92}
+.shot-remove:focus-visible{outline:2px solid #ffb3b7;outline-offset:2px}
 .shot-primary{display:grid;grid-template-columns:1.4fr .8fr;gap:6px}
 .shot-primary>div{display:grid;gap:3px;background:#111b15;border:1px solid #3e4e3e;border-radius:6px;padding:9px}
 .shot-primary span{font-size:9px;letter-spacing:.6px;color:#9fb49f;font-weight:850}
@@ -168,7 +170,7 @@
 .shot-hit .shot-cannon-controls button,.shot-hit .shot-cannon-controls button.active{
  background:#303736;border-color:#565f5d;color:#b6bebc}
 .shot-hit .shot-cannon-controls button.active{background:#4b5553;color:#e0e3e2}
-.shot-hit .shot-remove{background:#333a39;border-color:#56615e;color:#ced4d1}
+/* Delete remains red even on neutralized shot cards. */
 .shot-actions .success-btn,.shot-actions .miss-btn{font-size:12px;letter-spacing:.8px;
  min-height:43px;font-weight:900}
 .shot-actions .restore-btn{min-height:43px;width:100%;flex:1;
