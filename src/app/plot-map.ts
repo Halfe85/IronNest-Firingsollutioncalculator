@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import {type Point} from './map-math';
 import {
-  homeCamera, initialCamera, panCamera, viewFor, zoomCamera,
+  constrain, homeCamera, initialCamera, panCamera, viewFor, zoomCamera,
   type Camera, type ViewSize
 } from './plot-navigation';
 
@@ -76,7 +76,7 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
     const nest=this.markers.find(marker=>marker.role==='nest');
     if(!nest)return;
     this.focusedFirstNest=true;
-    this.camera.update(camera=>({...camera,x:this.x(nest.p.x),y:this.y(nest.p.y)}));
+    this.camera.update(camera=>constrain({...camera,x:this.x(nest.p.x),y:this.y(nest.p.y)},this.size()));
   }
   private size():ViewSize{return {width:this.viewportWidth(),height:this.viewportHeight()};}
   fitMap():void{
@@ -93,8 +93,8 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
     const nest=this.markers.find(m=>m.role==='nest');
     if(!nest)return;
     const s=this.size();
-    this.camera.set({x:this.x(nest.p.x),y:this.y(nest.p.y),
-      zoom:s.width<700?3.4:Math.max(2.2,this.camera().zoom)});
+    this.camera.set(constrain({x:this.x(nest.p.x),y:this.y(nest.p.y),
+      zoom:s.width<700?3.4:Math.max(2.2,this.camera().zoom)},s));
   }
   onWheel(event:WheelEvent):void{
     if(!this.navigation)return;

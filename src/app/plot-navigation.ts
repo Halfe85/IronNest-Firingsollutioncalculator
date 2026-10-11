@@ -19,10 +19,13 @@ export function viewFor(camera:Camera,size:ViewSize):ViewBox {
 export function constrain(camera:Camera,size:ViewSize):Camera {
   const zoom=clamp(camera.zoom,MIN_ZOOM,MAX_ZOOM);
   const area=viewFor({...camera,zoom},size);
-  // Leave a small pan margin for map labels, but never lose the map entirely.
+  // Keep the playable map filling the viewport when zoomed in.
+  // If the entire map fits, keep its center stable instead of showing a blank side.
+  const minX=45+area.width/2-10,maxX=925-area.width/2+10;
+  const minY=30+area.height/2-10,maxY=470-area.height/2+10;
   return {
-    x:clamp(camera.x,45-area.width*.3,925+area.width*.3),
-    y:clamp(camera.y,30-area.height*.3,470+area.height*.3),
+    x:area.width>=900?480:clamp(camera.x,minX,maxX),
+    y:area.height>=460?257.5:clamp(camera.y,minY,maxY),
     zoom
   };
 }

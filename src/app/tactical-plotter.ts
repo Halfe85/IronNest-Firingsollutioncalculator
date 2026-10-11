@@ -395,7 +395,10 @@ export class TacticalPlotterComponent{
     this.nodes.update(nodes=>nodes.filter(n=>n.id!==id));
     this.closeModal();
   }
-  openNode(id:string):void{this.activeId.set(id);this.observationMapVisible.set(false);this.modal.set('node');}
+  openNode(id:string):void{
+    this.filterOpen.set(false);
+    this.activeId.set(id);this.observationMapVisible.set(false);this.modal.set('node');
+  }
   openMap():void{this.modal.set('map');this.activeId.set(null);}
   addReport():void{
     const active=this.active();
