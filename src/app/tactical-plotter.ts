@@ -339,7 +339,7 @@ export class TacticalPlotterComponent{
       const nestPos=nestGrid?gridInputToPoint(nestGrid):null;
       const point=this.solution().get(node.id)?.position;
       const fire=nestPos&&point?firingFromPlot(nestPos,point):null;
-      if(fire&&fire.grid&&fire.rangeKm>0&&fire.rangeKm<=30){
+      if(nestPos&&fire&&fire.grid&&fire.rangeKm>0&&fire.rangeKm<=30){
         this.fireSolution.emit({label:node.name,bearing:fire.bearing,
           distanceKm:fire.rangeKm,grid:fire.grid,
           nestGrid:formatGrid(nestPos)??'',shell:this.draftShell(),
