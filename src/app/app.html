@@ -193,7 +193,7 @@
                 </div>
               </div>
               <div class="shot-primary">
-                <div><span>BEARING</span><strong>{{shot.bearing | number:'1.2-2'}}°</strong></div>
+                <div><span>BEARING</span><strong>{{shot.bearing | number:'1.1-1'}}°</strong></div>
                 <div><span>ELEVATION</span><strong>{{shot.elevation | number:'1.2-2'}}°</strong></div>
               </div>
               <div class="shot-secondary">
@@ -422,7 +422,7 @@
         @if(reportPreview();as corrected){
           <div class="grid-preview">
             <div><span>{{reportMode()==='impact'?'NEW AIM GRID':'NEW TARGET GRID'}}</span><strong>{{corrected.grid}}</strong></div>
-            <div><span>BEARING</span><strong>{{corrected.bearing | number:'1.2-2'}}°</strong></div>
+            <div><span>BEARING</span><strong>{{corrected.bearing | number:'1.1-1'}}°</strong></div>
             <div><span>ELEVATION</span><strong>{{corrected.elevation | number:'1.2-2'}}°</strong></div>
             <div><span>CHARGES</span><strong>{{corrected.charges}}</strong></div>
           </div>
