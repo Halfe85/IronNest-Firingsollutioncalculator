@@ -24,6 +24,11 @@
             <button type="button" (click)="setAllReportsVisible(false)">Hide all</button>
           </div>
         </div>
+        <label class="plot-route-filter">
+          <input type="checkbox" [checked]="showRoutes()"
+            (change)="showRoutes.set($any($event.target).checked)">
+          <span>Waypoint routes and markers</span>
+        </label>
         <div class="plot-filter-list">
           @for(report of reportRows();track report.id){
             <label class="plot-report-filter">
@@ -38,11 +43,15 @@
     }
     <div class="plot-main-map" aria-label="Full-screen observation map">
       <app-plot-map [markers]="mapMarkers()" [observations]="visibleObservations()"
-        [navigation]="true" (markerSelect)="openNode($event)"></app-plot-map>
+        [routeMarkers]="routeMarkers()" [routeSegments]="routeSegments()"
+        [navigation]="true" (markerSelect)="openNode($event)"
+        (routeMarkerSelect)="openRouteMarker($event)"></app-plot-map>
     </div>
     @if(status()){<div class="plot-bottom-status" role="status">{{status()}}</div>}
 </div>
 
+<app-route-planner [origins]="routeOrigins()" [nestGrid]="nestGridText()"
+  (overlayChange)="updateRouteOverlay($event)"></app-route-planner>
 
 @if(listOpen();as kind){
   <div class="plot-list-overlay" role="presentation" (click)="closeList()">
@@ -115,6 +124,11 @@
         <button type="button" class="plot-choice-item plot-choice-target" (click)="openAddWindow('target')">
           <span class="plot-choice-icon">⊕</span>
           <span><strong>TARGET</strong><small>Creates a firing solution when located</small></span>
+        </button>
+        <button type="button" class="plot-choice-item plot-choice-waypoint"
+          (click)="openAddWindow('waypoint')">
+          <span class="plot-choice-icon">⌁</span>
+          <span><strong>ADD WAYPOINT</strong><small>Create or edit a moving-target route</small></span>
         </button>
       </div>
     </section>

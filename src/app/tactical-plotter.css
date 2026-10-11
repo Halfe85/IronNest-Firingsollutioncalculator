@@ -398,3 +398,16 @@
   }
   .plot-list-entry{min-height:66px}
 }
+
+/* Route creation has its own distinct windows. */
+.plot-choice-waypoint{grid-column:1/-1;min-height:80px;border-color:#849766;background:#243429}
+.plot-choice-waypoint .plot-choice-icon{color:#a9d6a1}
+.plot-route-filter{
+  display:flex;align-items:center;gap:8px;padding:9px;
+  border:1px solid #536f50;border-radius:6px;background:#13241b;
+  font-size:12px;color:#e0efd7
+}
+.plot-route-filter input{width:20px;height:20px;accent-color:#dfc28c}
+@media(max-width:420px){
+  .plot-choice-waypoint{grid-column:auto;min-height:67px}
+}

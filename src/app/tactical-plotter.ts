@@ -1,5 +1,5 @@
 import {CommonModule} from '@angular/common';
-import {Component, EventEmitter, HostListener, Output, computed, effect, signal} from '@angular/core';
+import {Component, EventEmitter, HostListener, Output, computed, effect, signal, viewChild} from '@angular/core';
 import {formatGrid,compassCenter} from './map-math';
 import {TrainTrackerComponent,type MovingFireRequest} from './train-tracker';
 import {PlotMapComponent,type MapObservationMarker} from './plot-map';
@@ -12,6 +12,8 @@ import {SHELLS} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
 import {groupMapPoints} from './plot-lists';
+import {RoutePlannerComponent} from './route-planner';
+import {type TacticalRouteOrigin,type TacticalRouteOverlay} from './tactical-routes';
 
 export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon; stayOnPlot?:boolean;}
 function clone(src:readonly IntelNode[]):IntelNode[]{
@@ -23,10 +25,23 @@ function uid():string{
     Date.now().toString(36)+Math.random().toString(36).slice(2);
 }
 @Component({
-  selector:'app-tactical-plotter',standalone:true,imports:[CommonModule,GridSelectComponent,TrainTrackerComponent,PlotMapComponent],
+  selector:'app-tactical-plotter',standalone:true,imports:[CommonModule,GridSelectComponent,TrainTrackerComponent,PlotMapComponent,RoutePlannerComponent],
   templateUrl:'./tactical-plotter.html',styleUrl:'./tactical-plotter.css'
 })
 export class TacticalPlotterComponent{
+  readonly routePlanner=viewChild(RoutePlannerComponent);
+  readonly showRoutes=signal(true);
+  readonly displayedRoutes=signal<TacticalRouteOverlay>({markers:[],segments:[]});
+  readonly routeOrigins=computed<TacticalRouteOrigin[]>(()=>
+    this.solution().results.flatMap(item=>{
+      if(!item.position||item.node.role==='target')return [];
+      const grid=formatGrid(item.position);
+      return grid?[{id:item.node.id,name:item.node.name,grid}]:[];
+    }));
+  readonly routeMarkers=computed(()=>this.showRoutes()?this.displayedRoutes().markers:[]);
+  readonly routeSegments=computed(()=>this.showRoutes()?this.displayedRoutes().segments:[]);
+  updateRouteOverlay(overlay:TacticalRouteOverlay):void{this.displayedRoutes.set(overlay);}
+  openRouteMarker(id:string):void{this.routePlanner()?.openFromMap(id);}
   @Output() fireSolution=new EventEmitter<PlotFireRequest>();
   @Output() clearFiringSolutions=new EventEmitter<void>();
   readonly hydrated=signal(false);
@@ -203,7 +218,7 @@ export class TacticalPlotterComponent{
       if(!this.hydrated())return;
       void sessionDb.write('plotter',{
         nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
-        plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds()
+        plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds(),showRoutes:this.showRoutes()
       });
     });
   }
@@ -211,11 +226,12 @@ export class TacticalPlotterComponent{
     try{
       const data=await sessionDb.read<{
         nodes?:IntelNode[];targetLoadouts?:Record<string,{shell?:unknown;cannon?:unknown}>;
-        plottingMode?:'normal'|'waypoint';hiddenReportIds?:string[];
+        plottingMode?:'normal'|'waypoint';hiddenReportIds?:string[];showRoutes?:boolean;
       }>('plotter');
       if(!data)return;
       // Observation and waypoint will be merged: always open the unified map.
       // Keep waypoint data intact for the future merged workflow.
+      if(typeof data.showRoutes==='boolean')this.showRoutes.set(data.showRoutes);
       if(Array.isArray(data.hiddenReportIds))
         this.hiddenReportIds.set(data.hiddenReportIds.filter((id):id is string=>typeof id==='string'));
       if(Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
@@ -238,7 +254,7 @@ export class TacticalPlotterComponent{
     // Flush the last modal edit before Angular destroys this tab's component.
     if(this.hydrated())void sessionDb.write('plotter',{
       nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
-      plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds()
+      plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds(),showRoutes:this.showRoutes()
     });
   }
   @HostListener('document:keydown.escape')
@@ -276,7 +292,8 @@ export class TacticalPlotterComponent{
   newMission():void{
     if(!window.confirm('Start a new mission and replace the current locally saved plot?'))return;
     this.clearFiringSolutions.emit();
-    void sessionDb.clear('waypoint');
+    // Retain legacy waypoint data for migration.
+    this.routePlanner()?.clearRoutes();
     this.plottingMode.set('normal');
     this.targetLoadouts.set({});
     this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',reports:[]}]);
@@ -301,7 +318,7 @@ export class TacticalPlotterComponent{
     this.addStep.set(this.nestConfirmed()?'menu':'nest');
     this.modal.set('add');
   }
-  openAddWindow(step:'nest'|'spotter'|'reference'|'target'):void{
+  openAddWindow(step:'nest'|'spotter'|'reference'|'target'|'waypoint'):void{
     // No route can bypass the required Iron Nest coordinates.
     if(step!=='nest'&&!this.nestConfirmed()){
       this.draftNest.set(null);
@@ -309,6 +326,11 @@ export class TacticalPlotterComponent{
       return;
     }
     this.draftError.set('');
+    if(step==='waypoint'){
+      this.modal.set(null);
+      this.routePlanner()?.openSelection();
+      return;
+    }
     if(step==='nest'){
       this.draftNest.set(this.nest()?.grid??null);
     }else{

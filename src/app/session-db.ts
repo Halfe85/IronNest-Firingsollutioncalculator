@@ -10,7 +10,7 @@
 const NAME='iron-nest-session-state-v1';
 const OBJECT_STORE='session';
 const SESSION_TOKEN_KEY='iron-nest-active-session-token';
-export type SessionKey='firing'|'plotter'|'waypoint';
+export type SessionKey='firing'|'plotter'|'waypoint'|'routes';
 
 export function getOrCreateToken(storage:Pick<Storage,'getItem'|'setItem'>, create:()=>string):
   {token:string;fresh:boolean}{

@@ -77,3 +77,21 @@ test('bottom bar counters open dedicated map lists with spotters grouped as refe
   assert.match(appCss,/\.plot-footer-targets\{/);
   assert.match(plotCss,/\.plot-list-overlay\{/);
 });
+
+test('the fifth Add Reference option opens independent waypoint-route windows',()=>{
+  const html=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
+  const ts=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
+  const child=readFileSync(new URL('./route-planner.html',import.meta.url),'utf8');
+  assert.match(html,/openAddWindow\('waypoint'\)/);
+  assert.match(html,/\[routeSegments\]="routeSegments\(\)"/);
+  assert.match(html,/\[routeMarkers\]="routeMarkers\(\)"/);
+  assert.match(html,/routeMarkerSelect/);
+  assert.match(html,/Waypoint routes and markers/);
+  assert.match(ts,/this\.routePlanner\(\)\?\.openSelection\(\)/);
+  assert.match(ts,/this\.routePlanner\(\)\?\.clearRoutes\(\)/);
+  for(const name of ['select','config','waypoints','editor']){
+    assert.ok(child.includes("screen()==='"+name+"'"),name);
+  }
+  assert.match(child,/SAVE WAYPOINT/);
+  assert.match(child,/CALCULATE MISSING TIMES/);
+});

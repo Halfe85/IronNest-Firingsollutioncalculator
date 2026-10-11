@@ -21,7 +21,7 @@ function createId():string{
   templateUrl:'./route-planner.html',styleUrl:'./route-planner.css'
 })
 export class RoutePlannerComponent {
-  private readonly originsState=signal<TacticalRouteOrigin[]>([]);
+  readonly originsState=signal<TacticalRouteOrigin[]>([]);
   private readonly nestState=signal('');
   @Input() set origins(items:readonly TacticalRouteOrigin[]){
     this.originsState.set(items.map(o=>({...o})));
