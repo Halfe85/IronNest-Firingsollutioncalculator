@@ -33,6 +33,8 @@ export class TacticalPlotterComponent{
     id:'nest',name:'Iron Nest',role:'nest',reports:[]
   }]);
   readonly modal=signal<'map'|'node'|'add'|null>(null);
+  /** Each entry is its own modal screen. Unset Iron Nest forces the nest screen. */
+  readonly addStep=signal<'menu'|'nest'|'spotter'|'reference'|'target'>('menu');
   readonly filterOpen=signal(false);
   readonly hiddenReportIds=signal<string[]>([]);
   readonly draftRole=signal<Exclude<NodeRole,'nest'>>('spotter');
@@ -40,6 +42,8 @@ export class TacticalPlotterComponent{
   readonly draftName=signal('');
   readonly draftGrid=signal<GridInput|null>(null);
   readonly draftNest=signal<GridInput|null>(null);
+  readonly canSaveNest=computed(()=>!!this.draftNest()&&
+    !!gridInputToPoint(this.draftNest()!));
   readonly draftReports=signal<IntelReport[]>([]);
   readonly draftCandidate=signal<number|null>(null);
   readonly draftShell=signal('HCHE');
@@ -97,7 +101,10 @@ export class TacticalPlotterComponent{
     });
   });
   readonly canAddDraft=computed(()=>{
-    const nest=this.draftNest()??this.nest()?.grid;
+    // A draft cannot be saved until its own Iron Nest step has been completed.
+    if(!this.nestConfirmed()||this.addStep()==='menu'||this.addStep()==='nest')return false;
+    if(this.addStep()!==this.draftRole())return false;
+    const nest=this.nest()?.grid;
     if(!nest||!gridInputToPoint(nest))return false;
     if(this.draftRole()==='reference'&&!this.draftName().trim())return false;
     if(this.draftRole()==='spotter')return !!this.draftPosition();
@@ -198,7 +205,8 @@ export class TacticalPlotterComponent{
         plottingMode?:'normal'|'waypoint';hiddenReportIds?:string[];
       }>('plotter');
       if(!data)return;
-      if(data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
+      // Observation and waypoint will be merged: always open the unified map.
+      // Keep waypoint data intact for the future merged workflow.
       if(Array.isArray(data.hiddenReportIds))
         this.hiddenReportIds.set(data.hiddenReportIds.filter((id):id is string=>typeof id==='string'));
       if(Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
@@ -272,7 +280,40 @@ export class TacticalPlotterComponent{
     this.draftCandidate.set(null);
     this.draftShell.set('HCHE');
     this.draftCannon.set('left');
+    this.addStep.set(this.nestConfirmed()?'menu':'nest');
     this.modal.set('add');
+  }
+  openAddWindow(step:'nest'|'spotter'|'reference'|'target'):void{
+    // No route can bypass the required Iron Nest coordinates.
+    if(step!=='nest'&&!this.nestConfirmed()){
+      this.draftNest.set(null);
+      this.addStep.set('nest');
+      return;
+    }
+    this.draftError.set('');
+    if(step==='nest'){
+      this.draftNest.set(this.nest()?.grid??null);
+    }else{
+      this.changeDraftRole(step);
+    }
+    this.addStep.set(step);
+  }
+  backToAddMenu():void{
+    this.draftError.set('');
+    // The initial mandatory setup cannot be skipped by going back.
+    if(!this.nestConfirmed()){this.closeModal();return;}
+    this.addStep.set('menu');
+  }
+  saveIronNest():void{
+    const grid=this.draftNest();
+    if(!grid||!gridInputToPoint(grid)){
+      this.draftError.set('Choose valid Iron Nest grid coordinates first.');
+      return;
+    }
+    this.setNestGrid({...grid});
+    this.draftError.set('');
+    this.status.set('Iron Nest position saved at '+gridInputLabel(grid)+'.');
+    this.addStep.set('menu');
   }
   changeDraftRole(value:string):void{
     if(value!=='spotter'&&value!=='reference'&&value!=='target')return;
@@ -321,7 +362,7 @@ export class TacticalPlotterComponent{
     this.hiddenReportIds.set(visible?[]:this.reportRows().map(r=>r.id));
   }
   addReference():void{
-    if(!this.canAddDraft()){
+    if(this.addStep()!==this.draftRole()||!this.nestConfirmed()||!this.canAddDraft()){
       this.draftError.set('Set Iron Nest and enter valid coordinates or reports. Targets must have a resolved position.');
       return;
     }
@@ -339,8 +380,7 @@ export class TacticalPlotterComponent{
       reports:coordinateMode?[]:this.draftReports().map(r=>({...r})),
       ...(!coordinateMode&&this.draftCandidate()!==null?{chosenCandidate:this.draftCandidate()}: {})
     };
-    const nestGrid=this.draftNest()??this.nest()?.grid;
-    if(!this.nestConfirmed()&&nestGrid)this.setNestGrid({...nestGrid});
+    const nestGrid=this.nest()?.grid;
     this.nodes.update(nodes=>[...nodes,node]);
     if(role==='target'){
       const nestPos=nestGrid?gridInputToPoint(nestGrid):null;

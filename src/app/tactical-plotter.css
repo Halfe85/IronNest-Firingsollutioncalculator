@@ -256,3 +256,62 @@
  .plot-nest-indicator{display:none}
  .plot-dialog.plot-add-dialog{height:100dvh;border-radius:0}
 }
+
+/* Four dedicated Add Reference entry windows; the drop-down mode selector is gone. */
+.plot-map-title{
+  font-size:12px;font-weight:900;letter-spacing:1.2px;
+  color:#f3d39d;white-space:nowrap;
+}
+.plot-choice-dialog{width:min(540px,100%);min-height:0;max-height:calc(100dvh - 24px)}
+.plot-choice-note{color:#b6c7b0;font-size:12px;line-height:1.5;margin:0 0 14px}
+.plot-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;overflow-y:auto;min-height:0}
+.plot-choice-item{
+  min-width:0;min-height:118px;display:flex;align-items:center;gap:12px;
+  padding:16px 12px;text-align:left;border:1px solid #58715b;
+  border-radius:9px;color:#e9eee2;background:#14251b;
+  cursor:pointer;touch-action:manipulation;
+}
+.plot-choice-item:hover,.plot-choice-item:focus-visible{
+  border-color:#efc489;background:#283e2c;
+}
+.plot-choice-item:focus-visible{outline:2px solid #f7d5a7;outline-offset:2px}
+.plot-choice-item>span:last-child{display:grid;gap:6px;min-width:0;flex:1}
+.plot-choice-item strong{font-size:13px;font-weight:900;letter-spacing:.55px}
+.plot-choice-item small{font-size:11px;line-height:1.45;color:#adbfab}
+.plot-choice-icon{
+  font-size:28px;line-height:1;flex:none;
+  display:grid;place-items:center;width:36px;height:36px;
+}
+.plot-choice-nest .plot-choice-icon{color:#eec18b}
+.plot-choice-spotter .plot-choice-icon{color:#9acdeb}
+.plot-choice-reference .plot-choice-icon{color:#e2cc8b}
+.plot-choice-target .plot-choice-icon{color:#efa28e}
+.plot-type-dialog .dialog-heading h2,.plot-nest-dialog .dialog-heading h2{font-size:19px}
+.plot-nest-dialog{width:min(500px,100%);min-height:0}
+.plot-nest-dialog .plot-required-nest{margin:0 0 12px}
+.plot-nest-dialog .plot-add-footer .primary-action{flex:1}
+@media(max-width:700px){
+ .plot-map-title{font-size:11px;letter-spacing:.45px}
+ .plot-choice-dialog{
+   width:100%;max-width:100%;max-height:calc(100dvh - env(safe-area-inset-top));
+   border-radius:18px 18px 0 0;border-left:0;border-right:0;border-bottom:0;
+   margin:0;padding:12px 12px calc(12px + env(safe-area-inset-bottom))
+ }
+ .plot-choice-note{margin:0 0 12px}
+ .plot-choice-grid{gap:9px}
+ .plot-choice-item{min-height:112px;padding:10px;gap:8px}
+ .plot-choice-icon{width:29px;font-size:24px}
+ .plot-choice-item strong{font-size:12px}
+ .plot-choice-item small{font-size:10px}
+}
+@media(max-width:420px){
+ .plot-choice-grid{grid-template-columns:1fr;gap:7px}
+ .plot-choice-item{min-height:67px;padding:10px 13px}
+ .plot-choice-item>span:last-child{gap:2px}
+ .plot-choice-note{font-size:11px;margin-bottom:9px}
+}
+@media(max-height:490px){
+ .plot-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .plot-choice-item{min-height:70px}
+ .plot-choice-dialog{max-height:100dvh;overflow:auto;border-radius:7px}
+}

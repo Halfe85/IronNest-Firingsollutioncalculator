@@ -1,15 +1,7 @@
 <div class="plot-layout">
-  @if(plottingMode()==='normal'){
     <div class="plot-map-toolbar">
       <div class="plot-toolbar-left">
-        <label class="plot-mode-inline">
-          <span class="sr-only">Plotter mode</span>
-          <select [value]="plottingMode()" (change)="setMode($any($event.target).value)"
-            aria-label="Plotter mode">
-            <option value="normal">OBSERVATION MAP</option>
-            <option value="waypoint">WAYPOINT MODE</option>
-          </select>
-        </label>
+        <strong class="plot-map-title">TACTICAL MAP</strong>
         <span class="plot-nest-indicator" [class.missing]="!nestConfirmed()">
           IRON NEST · {{nestGridText()??'NOT SET'}}
         </span>
@@ -49,48 +41,73 @@
         [navigation]="true" (markerSelect)="openNode($event)"></app-plot-map>
     </div>
     @if(status()){<div class="plot-bottom-status" role="status">{{status()}}</div>}
-  }@else{
-    <div class="plot-waypoint-top">
-      <button type="button" (click)="setMode('normal')">← OBSERVATION MAP</button>
-      <strong>WAYPOINT TRACKER</strong>
-    </div>
-    <div class="plot-waypoint-body">
-      <app-train-tracker [currentNestGrid]="nestGridText()"
-        (clearFiringSolutions)="clearFiringSolutions.emit()"
-        (nestGridChange)="setNestGrid($event)"
-        (useSolution)="useMovingSolution($event)"></app-train-tracker>
-    </div>
-  }
 </div>
 
 @if(modal()==='add'){
 <div class="plot-overlay" (click)="closeModal()" role="presentation">
-  <section class="plot-dialog plot-add-dialog" role="dialog" aria-modal="true"
-    aria-label="Add map reference" (click)="$event.stopPropagation()">
-    <header class="dialog-heading">
-      <div><span class="micro-label">TACTICAL PLOTTER</span><h2>Add Reference</h2></div>
-      <button type="button" class="close-x" (click)="closeModal()" aria-label="Cancel adding reference">×</button>
-    </header>
-    <div class="plot-add-scroll">
-      @if(!nestConfirmed()){
+  @if(addStep()==='menu'){
+    <section class="plot-dialog plot-add-dialog plot-choice-dialog" role="dialog"
+      aria-modal="true" aria-label="Choose reference type" (click)="$event.stopPropagation()">
+      <header class="dialog-heading">
+        <div><span class="micro-label">TACTICAL PLOTTER</span><h2>Add Reference</h2></div>
+        <button type="button" class="close-x" (click)="closeModal()" aria-label="Close reference menu">×</button>
+      </header>
+      <p class="plot-choice-note">Choose the type of map reference to add.</p>
+      <div class="plot-choice-grid">
+        <button type="button" class="plot-choice-item plot-choice-nest" (click)="openAddWindow('nest')">
+          <span class="plot-choice-icon">⌖</span>
+          <span><strong>IRON NEST</strong><small>{{nestConfirmed()?'Update grid coordinates':'Set required grid coordinates'}}</small></span>
+        </button>
+        <button type="button" class="plot-choice-item plot-choice-spotter" (click)="openAddWindow('spotter')">
+          <span class="plot-choice-icon">◉</span>
+          <span><strong>SPOTTER</strong><small>Numbered observer · Coordinates</small></span>
+        </button>
+        <button type="button" class="plot-choice-item plot-choice-reference" (click)="openAddWindow('reference')">
+          <span class="plot-choice-icon">◇</span>
+          <span><strong>REFERENCE</strong><small>Named point · Coordinates or reports</small></span>
+        </button>
+        <button type="button" class="plot-choice-item plot-choice-target" (click)="openAddWindow('target')">
+          <span class="plot-choice-icon">⊕</span>
+          <span><strong>TARGET</strong><small>Creates a firing solution when located</small></span>
+        </button>
+      </div>
+    </section>
+  }@else if(addStep()==='nest'){
+    <section class="plot-dialog plot-add-dialog plot-nest-dialog" role="dialog"
+      aria-modal="true" aria-label="Iron Nest coordinates" (click)="$event.stopPropagation()">
+      <header class="dialog-heading">
+        <div><span class="micro-label">TACTICAL PLOTTER</span><h2>Iron Nest Coordinates</h2></div>
+        <button type="button" class="close-x" (click)="closeModal()" aria-label="Close Iron Nest setup">×</button>
+      </header>
+      <div class="plot-add-scroll">
         <section class="plot-required-nest">
-          <strong>1 · IRON NEST POSITION REQUIRED</strong>
-          <p>Set the Iron Nest grid before adding any reference. This position is saved when you press Add.</p>
+          <strong>{{nestConfirmed()?'IRON NEST POSITION':'IRON NEST POSITION REQUIRED'}}</strong>
+          <p>{{nestConfirmed()
+            ?'Update the Iron Nest location. Dependent firing bearings will update.'
+            :'Set Iron Nest coordinates first. After saving you can choose Spotter, Reference or Target.'}}</p>
           <app-grid-select [value]="draftNest()??emptyGrid"
             (valueChange)="draftNest.set($event)"></app-grid-select>
-          @if(!draftNest()){<small>Select a grid field to confirm the Iron Nest position.</small>}
+          @if(!draftNest()){<small>Select a grid coordinate field to confirm the position.</small>}
         </section>
-      }
+        @if(draftError()){<p class="plot-draft-error" role="alert">{{draftError()}}</p>}
+      </div>
+      <footer class="plot-add-footer">
+        <button type="button" class="secondary-action" (click)="backToAddMenu()">{{nestConfirmed()?'Back':'Cancel'}}</button>
+        <button type="button" class="primary-action" [disabled]="!canSaveNest()"
+          (click)="saveIronNest()">SAVE IRON NEST</button>
+      </footer>
+    </section>
+  }@else{
+  <section class="plot-dialog plot-add-dialog plot-type-dialog" role="dialog" aria-modal="true"
+    [attr.aria-label]="addStep()==='spotter'?'Add spotter':addStep()==='reference'?'Add reference':'Add target'"
+    (click)="$event.stopPropagation()">
+    <header class="dialog-heading">
+      <div><span class="micro-label">TACTICAL PLOTTER · ADD POINT</span>
+          <h2>{{addStep()==='spotter'?'New Spotter':addStep()==='reference'?'New Reference':'New Target'}}</h2></div>
+      <button type="button" class="close-x" (click)="closeModal()" aria-label="Close point entry">×</button>
+    </header>
+    <div class="plot-add-scroll">
       <div class="plot-add-type">
-        <label class="field-label">
-          <span>REFERENCE TYPE</span>
-          <select aria-label="Reference type" [value]="draftRole()"
-            (change)="changeDraftRole($any($event.target).value)">
-            <option value="spotter">Spotter #XX</option>
-            <option value="reference">Reference - [Name]</option>
-            <option value="target">Target #XX - [Name optional]</option>
-          </select>
-        </label>
         @if(draftRole()!=='spotter'){
           <label class="field-label">
             <span>{{draftRole()==='reference'?'REFERENCE NAME (REQUIRED)':'TARGET NAME (OPTIONAL)'}}</span>
@@ -197,11 +214,12 @@
       @if(draftError()){<p class="plot-draft-error" role="alert">{{draftError()}}</p>}
     </div>
     <footer class="plot-add-footer">
-      <button type="button" class="secondary-action" (click)="closeModal()">Cancel</button>
+      <button type="button" class="secondary-action" (click)="backToAddMenu()">Back</button>
       <button type="button" class="primary-action" [disabled]="!canAddDraft()"
         (click)="addReference()">ADD {{draftRole()==='spotter'?'SPOTTER':draftRole()==='target'?'TARGET':'REFERENCE'}}</button>
     </footer>
   </section>
+  }
 </div>
 }
 

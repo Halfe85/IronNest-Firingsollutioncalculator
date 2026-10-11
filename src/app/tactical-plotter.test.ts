@@ -28,3 +28,32 @@ test('map markers open editing and the parent plot view fills available height',
   assert.match(app,/\[class\.plot-view\]="tab\(\)==='plot'"/);
   assert.match(appCss,/\.main-content\.plot-view\{/);
 });
+
+test('Add Reference routes unset Iron Nest directly to a dedicated required coordinate window',()=>{
+  const html=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
+  const ts=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
+  assert.match(ts,/addStep\.set\(this\.nestConfirmed\(\)\?'menu':'nest'\)/);
+  assert.match(ts,/saveIronNest\(\):void/);
+  assert.match(ts,/this\.setNestGrid\(\{\.\.\.grid\}\)/);
+  assert.match(ts,/this\.addStep\.set\('menu'\)/);
+  assert.match(ts,/if\(step!=='nest'&&!this\.nestConfirmed\(\)\)/);
+  assert.match(html,/@else if\(addStep\(\)==='nest'\)/);
+  assert.match(html,/IRON NEST POSITION REQUIRED/);
+  assert.match(html,/\[disabled\]="!canSaveNest\(\)"/);
+  assert.match(html,/\(click\)="saveIronNest\(\)"/);
+});
+test('reference chooser has four separate routes and no Observation / Waypoint dropdown',()=>{
+  const html=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
+  const css=readFileSync(new URL('./tactical-plotter.css',import.meta.url),'utf8');
+  for(const role of ['nest','spotter','reference','target']){
+    assert.ok(html.includes("(click)=\"openAddWindow('"+role+"')\""));
+  }
+  assert.match(html,/addStep\(\)==='menu'/);
+  assert.match(html,/class="plot-choice-grid"/);
+  assert.match(html,/class="plot-dialog plot-add-dialog plot-type-dialog"/);
+  assert.match(html,/\(click\)="backToAddMenu\(\)"/);
+  assert.doesNotMatch(html,/\[value\]="plottingMode\(\)"/);
+  assert.doesNotMatch(html,/WAYPOINT MODE|OBSERVATION MAP<\/option>/);
+  assert.doesNotMatch(html,/REFERENCE TYPE/);
+  assert.match(css,/@media\(max-width:420px\)/);
+});
