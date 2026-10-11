@@ -42,6 +42,8 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
   private pointers=new Map<number,{x:number;y:number}>();
   private lastGestureAt=0;
   private movedSinceDown=false;
+  private focusedFirstNest=false;
+  private userNavigated=false;
 
   ngAfterViewInit():void{
     this.measure();
@@ -64,14 +66,30 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
       this.hasMeasured=true;
       if(this.navigation)this.camera.set(initialCamera(size));
     }
+    this.tryFocusFirstNest();
+  }
+  ngOnChanges():void{
+    this.tryFocusFirstNest();
+  }
+  private tryFocusFirstNest():void{
+    if(!this.navigation||!this.hasMeasured||this.focusedFirstNest||this.userNavigated)return;
+    const nest=this.markers.find(marker=>marker.role==='nest');
+    if(!nest)return;
+    this.focusedFirstNest=true;
+    this.camera.update(camera=>({...camera,x:this.x(nest.p.x),y:this.y(nest.p.y)}));
   }
   private size():ViewSize{return {width:this.viewportWidth(),height:this.viewportHeight()};}
-  fitMap():void{this.camera.set({...homeCamera});}
+  fitMap():void{
+    this.userNavigated=true;
+    this.camera.set({...homeCamera});
+  }
   zoomStep(factor:number):void{
+    this.userNavigated=true;
     const s=this.size();
     this.camera.update(camera=>zoomCamera(camera,s,factor,s.width/2,s.height/2));
   }
   focusNest():void{
+    this.userNavigated=true;
     const nest=this.markers.find(m=>m.role==='nest');
     if(!nest)return;
     const s=this.size();
@@ -81,6 +99,7 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
   onWheel(event:WheelEvent):void{
     if(!this.navigation)return;
     event.preventDefault();
+    this.userNavigated=true;
     const rect=this.frame?.nativeElement.getBoundingClientRect();
     if(!rect)return;
     this.camera.update(camera=>zoomCamera(camera,this.size(),
@@ -91,8 +110,7 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
     event.preventDefault();
     this.pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
     if(this.pointers.size===1)this.movedSinceDown=false;
-    const el=event.currentTarget;
-    if(el instanceof SVGSVGElement)try{el.setPointerCapture(event.pointerId);}catch{}
+    // Do not capture before movement: a simple tap must reach its marker.
   }
   onPointerMove(event:PointerEvent):void{
     if(!this.navigation||!this.pointers.has(event.pointerId))return;
@@ -123,7 +141,12 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
       this.camera.update(camera=>panCamera(camera,s,dx,dy));
     }
     this.movedSinceDown=true;
+    this.userNavigated=true;
     this.lastGestureAt=Date.now();
+    const el=event.currentTarget;
+    if(el instanceof SVGSVGElement&&!el.hasPointerCapture(event.pointerId))
+      try{el.setPointerCapture(event.pointerId);}catch{}
+
   }
   onPointerUp(event:PointerEvent):void{
     if(!this.pointers.has(event.pointerId))return;
