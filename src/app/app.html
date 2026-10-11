@@ -273,7 +273,7 @@
     </div>
   </main>
 
-  <footer class="bottom-bar">
+  <footer class="bottom-bar" [class.plot-footer-mode]="tab()==='plot'">
     <div class="bottom-solution" aria-live="polite">
       @if(bottomSolution();as sol){
         <span class="bottom-unit"><small>CHARGES</small><strong>{{sol.charge}}</strong></span>
@@ -283,6 +283,24 @@
         <span class="bottom-empty">NO ACTIVE FIRING SOLUTION</span>
       }
     </div>
+    @if(tab()==='plot'){
+      @if(plotter();as tactical){
+        <div class="plot-footer-lists" role="group" aria-label="Tactical map point lists">
+          <button type="button" class="plot-footer-counter plot-footer-references"
+            [class.is-open]="tactical.listOpen()==='references'"
+            [attr.aria-expanded]="tactical.listOpen()==='references'"
+            [attr.aria-label]="'Open references and spotters list ('+tactical.referenceCount()+')'"
+            aria-haspopup="dialog" title="References and spotters"
+            (click)="tactical.openList('references')">{{tactical.referenceCount()}}</button>
+          <button type="button" class="plot-footer-counter plot-footer-targets"
+            [class.is-open]="tactical.listOpen()==='targets'"
+            [attr.aria-expanded]="tactical.listOpen()==='targets'"
+            [attr.aria-label]="'Open targets list ('+tactical.targetCount()+')'"
+            aria-haspopup="dialog" title="Targets"
+            (click)="tactical.openList('targets')">{{tactical.targetCount()}}</button>
+        </div>
+      }
+    }
     <button type="button" class="about-button" (click)="openAbout()" aria-label="About and help">?</button>
   </footer>
 </div>

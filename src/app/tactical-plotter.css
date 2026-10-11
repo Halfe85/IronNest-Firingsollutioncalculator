@@ -315,3 +315,86 @@
  .plot-choice-item{min-height:70px}
  .plot-choice-dialog{max-height:100dvh;overflow:auto;border-radius:7px}
 }
+
+/* Saved reference/target list opens from persistent footer counters. */
+.plot-list-overlay{
+  position:fixed;inset:0;z-index:1120;
+  display:flex;align-items:flex-end;justify-content:flex-end;
+  padding:12px max(12px,env(safe-area-inset-right))
+    calc(76px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  background:#020b07a3;box-sizing:border-box;
+}
+.plot-list-dialog{
+  box-sizing:border-box;display:flex;flex-direction:column;min-width:0;
+  width:min(440px,100%);max-height:min(580px,calc(100dvh - 120px));
+  padding:14px;background:#1b2a20;color:#e9efe4;
+  border:1px solid #78916f;border-radius:12px;
+  box-shadow:0 16px 46px #000b;
+}
+.plot-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 12px}
+.plot-list-heading>div{min-width:0}
+.plot-list-heading h2{
+  font-size:18px;margin:4px 0 0;display:flex;gap:10px;align-items:center
+}
+.plot-list-total{
+  display:grid;place-items:center;min-width:27px;min-height:27px;
+  padding:2px 6px;border:1px solid #7e9a78;border-radius:18px;
+  background:#2f4935;color:#d6ead1;font-size:13px
+}
+.plot-list-close{
+  width:42px;height:42px;flex:none;border:1px solid #72836a;
+  border-radius:7px;background:#2e4030;color:#fff0df;font-size:24px
+}
+.plot-list-entries{
+  display:grid;align-content:start;gap:8px;overflow-y:auto;
+  overscroll-behavior:contain;min-height:0;flex:1;padding:2px 1px 4px
+}
+.plot-list-entry{
+  display:flex;align-items:center;gap:10px;min-width:0;
+  width:100%;min-height:64px;padding:10px 12px;
+  background:#122019;color:#f0f0df;border:1px solid #49634b;
+  border-radius:8px;text-align:left;touch-action:manipulation
+}
+.plot-list-entry:hover{background:#25382a;border-color:#d1af74}
+.plot-list-entry:focus-visible,.plot-list-close:focus-visible{
+  outline:2px solid #f3d099;outline-offset:2px
+}
+.plot-list-point-icon{
+  flex:none;font-size:23px;display:grid;place-items:center;
+  width:34px;height:34px;color:#e4cf9c
+}
+.plot-list-entry:has(.plot-list-point-icon) .plot-list-entry-arrow{
+  font-size:24px;color:#b5c5b1
+}
+.plot-list-target .plot-list-point-icon{color:#f09588}
+.plot-list-entry-details{flex:1;min-width:0;display:grid;gap:5px}
+.plot-list-entry-details strong{
+  font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.plot-list-entry-details small{
+  font-size:10px;color:#b1c1af;overflow-wrap:anywhere;line-height:1.35
+}
+.plot-list-empty{padding:21px 12px;text-align:center;border:1px dashed #60715a;border-radius:7px}
+.plot-list-empty strong{font-size:13px}
+.plot-list-empty p{font-size:11px;color:#b4c3ae;line-height:1.5}
+.plot-list-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;border-top:1px solid #4c604b;padding-top:10px;margin-top:8px;
+  color:#a9b7a4;font-size:11px
+}
+.plot-list-foot button{
+  min-height:42px;min-width:72px;padding:6px 12px;
+  border-radius:6px;background:#36503a;color:#edebda;
+  border:1px solid #78966b;font-weight:800
+}
+@media(max-width:600px){
+  .plot-list-overlay{
+    align-items:flex-end;justify-content:stretch;
+    padding:6px 6px calc(70px + env(safe-area-inset-bottom))
+  }
+  .plot-list-dialog{
+    width:100%;max-height:min(70dvh,calc(100dvh - 105px));
+    border-radius:14px 14px 8px 8px;padding:12px
+  }
+  .plot-list-entry{min-height:66px}
+}

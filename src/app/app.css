@@ -377,3 +377,52 @@
 .plot-view .main-tabs{flex:none}
 .plot-view .plot-tab-content{flex:1;min-height:0;display:flex;overflow:hidden;padding:0}
 .plot-tab-content>app-tactical-plotter{display:flex;flex:1;min-height:0;min-width:0}
+
+/* Tactical map lists in the persistent bottom bar. Both counters are round,
+   reachable by touch and derive their totals from the saved plotter nodes. */
+.plot-footer-lists{
+  display:flex;align-items:center;gap:7px;flex:none;margin-left:auto
+}
+.plot-footer-counter{
+  display:grid;place-items:center;flex:none;
+  width:44px;height:44px;min-width:44px;min-height:44px;
+  border-radius:50%;font-size:15px;font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;cursor:pointer;
+  touch-action:manipulation;
+}
+.plot-footer-references{
+  color:#f9e5ba;background:#62502d;border:2px solid #d5ab62
+}
+.plot-footer-references:hover,.plot-footer-references.is-open{
+  background:#8b6938;border-color:#f4d08c
+}
+.plot-footer-targets{
+  color:#fff4f3;background:#842c35;border:2px solid #e1777c
+}
+.plot-footer-targets:hover,.plot-footer-targets.is-open{
+  background:#af3e48;border-color:#ffb1b6
+}
+.plot-footer-counter:focus-visible{
+  outline:2px solid #ffe6b8;outline-offset:3px
+}
+@media(max-width:600px){
+ .bottom-bar.plot-footer-mode{gap:7px}
+ .plot-footer-lists{gap:6px}
+ .plot-footer-mode .bottom-solution{gap:6px;flex:1;overflow:hidden;min-width:0}
+ .plot-footer-mode .bottom-empty{
+   font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+   letter-spacing:0
+ }
+ .plot-footer-mode .bottom-unit{display:grid;gap:1px;min-width:0}
+ .plot-footer-mode .bottom-unit small{font-size:8px}
+ .plot-footer-mode .bottom-unit strong{font-size:20px;white-space:nowrap}
+ .plot-footer-mode .bottom-separator{height:28px;flex:none}
+}
+@media(max-width:360px){
+ .bottom-bar.plot-footer-mode{gap:5px}
+ .plot-footer-lists{gap:5px}
+ .plot-footer-counter{width:42px;height:42px;min-width:42px;min-height:42px}
+ .plot-footer-mode .about-button{width:42px;height:42px;min-width:42px}
+ .plot-footer-mode .bottom-unit strong{font-size:17px}
+ .plot-footer-mode .bottom-unit small{display:none}
+}

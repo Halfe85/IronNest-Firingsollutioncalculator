@@ -57,3 +57,23 @@ test('reference chooser has four separate routes and no Observation / Waypoint d
   assert.doesNotMatch(html,/REFERENCE TYPE/);
   assert.match(css,/@media\(max-width:420px\)/);
 });
+
+test('bottom bar counters open dedicated map lists with spotters grouped as references',()=>{
+  const app=readFileSync(new URL('./app.html',import.meta.url),'utf8');
+  const appTs=readFileSync(new URL('./app.ts',import.meta.url),'utf8');
+  const plot=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
+  const plotTs=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
+  const appCss=readFileSync(new URL('./app.css',import.meta.url),'utf8');
+  const plotCss=readFileSync(new URL('./tactical-plotter.css',import.meta.url),'utf8');
+  assert.match(appTs,/viewChild\(TacticalPlotterComponent\)/);
+  assert.match(app,/tactical\.referenceCount\(\)/);
+  assert.match(app,/tactical\.targetCount\(\)/);
+  assert.match(app,/tactical\.openList\('references'\)/);
+  assert.match(app,/tactical\.openList\('targets'\)/);
+  assert.match(plot,/\(click\)="openNode\(point\.id\)"/);
+  assert.match(plot,/References & Spotters/);
+  assert.match(plot,/No targets yet/);
+  assert.match(plotTs,/groupMapPoints\(this\.nodes\(\)\)/);
+  assert.match(appCss,/\.plot-footer-targets\{/);
+  assert.match(plotCss,/\.plot-list-overlay\{/);
+});

@@ -11,6 +11,7 @@ import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
+import {groupMapPoints} from './plot-lists';
 
 export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon; stayOnPlot?:boolean;}
 function clone(src:readonly IntelNode[]):IntelNode[]{
@@ -36,6 +37,14 @@ export class TacticalPlotterComponent{
   /** Each entry is its own modal screen. Unset Iron Nest forces the nest screen. */
   readonly addStep=signal<'menu'|'nest'|'spotter'|'reference'|'target'>('menu');
   readonly filterOpen=signal(false);
+  readonly listOpen=signal<'references'|'targets'|null>(null);
+  readonly plotLists=computed(()=>groupMapPoints(this.nodes()));
+  readonly referenceList=computed(()=>this.plotLists().references);
+  readonly targetList=computed(()=>this.plotLists().targets);
+  readonly referenceCount=computed(()=>this.referenceList().length);
+  readonly targetCount=computed(()=>this.targetList().length);
+  readonly selectedList=computed(()=>
+    this.listOpen()==='references'?this.referenceList():this.targetList());
   readonly hiddenReportIds=signal<string[]>([]);
   readonly draftRole=signal<Exclude<NodeRole,'nest'>>('spotter');
   readonly draftMethod=signal<'coordinates'|'reports'>('coordinates');
@@ -234,9 +243,17 @@ export class TacticalPlotterComponent{
   }
   @HostListener('document:keydown.escape')
   closeModal():void{
+    if(this.listOpen()){this.closeList();return;}
     this.modal.set(null);this.activeId.set(null);this.observationMapVisible.set(false);
     this.draftError.set('');
   }
+  openList(kind:'references'|'targets'):void{
+    const next=this.listOpen()===kind?null:kind;
+    if(this.modal())this.closeModal();
+    this.filterOpen.set(false);
+    this.listOpen.set(next);
+  }
+  closeList():void{this.listOpen.set(null);}
   setMode(mode:'normal'|'waypoint'):void{this.plottingMode.set(mode);this.closeModal();}
   showMapFromObservations():void{this.modal.set('map');}
   backFromMap():void{if(this.activeId())this.modal.set('node');else this.closeModal();}
@@ -269,6 +286,7 @@ export class TacticalPlotterComponent{
   }
 
   openAddReference():void{
+    this.closeList();
     this.closeModal();
     this.filterOpen.set(false);
     this.draftRole.set('spotter');
@@ -436,6 +454,7 @@ export class TacticalPlotterComponent{
     this.closeModal();
   }
   openNode(id:string):void{
+    this.closeList();
     this.filterOpen.set(false);
     this.activeId.set(id);this.observationMapVisible.set(false);this.modal.set('node');
   }

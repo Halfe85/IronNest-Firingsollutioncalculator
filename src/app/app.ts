@@ -1,5 +1,5 @@
 import {CommonModule} from '@angular/common';
-import {Component, HostListener, computed, effect, signal} from '@angular/core';
+import {Component, HostListener, computed, effect, signal, viewChild} from '@angular/core';
 import {TacticalPlotterComponent, type PlotFireRequest} from './tactical-plotter';
 import {GridSelectComponent} from './grid-select';
 import {EMPTY_GRID,gridInputFromText,gridInputLabel,gridInputToPoint,type GridInput} from './graph-math';
@@ -44,6 +44,8 @@ function uid():string {
   templateUrl:'./app.html',styleUrl:'./app.css'
 })
 export class AppComponent {
+  /** Reactive access to the currently mounted Tactical Plotter for footer counters. */
+  readonly plotter=viewChild(TacticalPlotterComponent);
   readonly gridInputLabel=gridInputLabel;
   readonly charges=CHARGES;
   readonly shells=SHELLS;

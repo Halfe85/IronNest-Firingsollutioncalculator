@@ -43,6 +43,52 @@
     @if(status()){<div class="plot-bottom-status" role="status">{{status()}}</div>}
 </div>
 
+
+@if(listOpen();as kind){
+  <div class="plot-list-overlay" role="presentation" (click)="closeList()">
+    <section class="plot-list-dialog" role="dialog" aria-modal="true"
+      aria-labelledby="plot-list-heading" (click)="$event.stopPropagation()">
+      <header class="plot-list-heading">
+        <div>
+          <span class="micro-label">TACTICAL MAP · SAVED POINTS</span>
+          <h2 id="plot-list-heading">{{kind==='references'?'References & Spotters':'Targets'}}
+            <span class="plot-list-total">{{kind==='references'?referenceCount():targetCount()}}</span>
+          </h2>
+        </div>
+        <button type="button" class="plot-list-close" (click)="closeList()"
+          aria-label="Close map point list">×</button>
+      </header>
+      <div class="plot-list-entries">
+        @for(point of selectedList();track point.id){
+          <button type="button" class="plot-list-entry"
+            [class.plot-list-target]="point.role==='target'"
+            (click)="openNode(point.id)"
+            [attr.aria-label]="'Open '+point.name+', '+plotLabel(point.id)">
+            <span class="plot-list-point-icon" aria-hidden="true">
+              {{point.role==='spotter'?'◉':point.role==='reference'?'◇':'⊕'}}
+            </span>
+            <span class="plot-list-entry-details">
+              <strong>{{point.name}}</strong>
+              <small>{{point.role==='spotter'?'SPOTTER':point.role==='reference'?'REFERENCE':'TARGET'}}
+                · {{plotLabel(point.id)}}</small>
+            </span>
+            <span class="plot-list-entry-arrow" aria-hidden="true">›</span>
+          </button>
+        }@empty{
+          <div class="plot-list-empty">
+            <strong>{{kind==='references'?'No references or spotters yet.':'No targets yet.'}}</strong>
+            <p>Use Add Reference on the tactical map to create one.</p>
+          </div>
+        }
+      </div>
+      <div class="plot-list-foot">
+        <span>{{selectedList().length}} {{kind==='references'?'references & spotters':'targets'}}</span>
+        <button type="button" (click)="closeList()">Done</button>
+      </div>
+    </section>
+  </div>
+}
+
 @if(modal()==='add'){
 <div class="plot-overlay" (click)="closeModal()" role="presentation">
   @if(addStep()==='menu'){
