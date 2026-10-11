@@ -3,6 +3,7 @@ import {
   Output, ViewChild, computed, signal
 } from '@angular/core';
 import {type Point} from './map-math';
+import {type RouteMapMarker,type RouteMapSegment} from './tactical-routes';
 import {
   constrain, homeCamera, initialCamera, panCamera, viewFor, zoomCamera,
   type Camera, type ViewSize
@@ -19,6 +20,9 @@ let mapInstance=0;
 export class PlotMapComponent implements AfterViewInit, OnDestroy {
   @Input() markers:readonly MapPointMarker[]=[];
   @Input() observations:readonly MapObservationMarker[]=[];
+  @Input() routeMarkers:readonly RouteMapMarker[]=[];
+  @Input() routeSegments:readonly RouteMapSegment[]=[];
+  @Output() routeMarkerSelect=new EventEmitter<string>();
   @Input() highlightId:string|null=null;
   /** Large observation map: gestures and controls on; miniature previews: off. */
   @Input() navigation=false;
@@ -156,6 +160,10 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
     if(el instanceof SVGSVGElement&&el.hasPointerCapture(event.pointerId))
       el.releasePointerCapture(event.pointerId);
     if(this.movedSinceDown)this.lastGestureAt=Date.now();
+  }
+  selectRouteMarker(id:string):void{
+    if(Date.now()-this.lastGestureAt<300)return;
+    this.routeMarkerSelect.emit(id);
   }
   selectMarker(id:string):void{
     if(Date.now()-this.lastGestureAt<300)return; // Never select while panning.

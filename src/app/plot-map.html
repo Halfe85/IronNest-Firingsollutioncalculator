@@ -21,6 +21,11 @@
     <line x1="925" x2="925" y1="30" y2="470" class="map-line"/>
     <line x1="45" x2="925" y1="470" y2="470" class="map-line"/>
     <g [attr.clip-path]="'url(#'+clipId+')'">
+      @for(segment of routeSegments;track segment.id){
+        <line class="map-route-segment"
+          [attr.x1]="x(segment.from.x)" [attr.y1]="y(segment.from.y)"
+          [attr.x2]="x(segment.to.x)" [attr.y2]="y(segment.to.y)"/>
+      }
       @for(obs of observations;track obs.id){
         @if(obs.type==='range'){
           <circle [attr.cx]="x(obs.source.x)" [attr.cy]="y(obs.source.y)"
@@ -31,6 +36,23 @@
         }@else{
           <path [attr.d]="sectorPath(obs)" class="observation-sector"/>
         }
+      }
+      @for(point of routeMarkers;track point.id){
+        <g class="map-route-point" role="button" tabindex="0"
+          [attr.aria-label]="'Edit waypoint '+point.name+' at '+point.grid"
+          (click)="selectRouteMarker(point.id)"
+          (keydown.enter)="selectRouteMarker(point.id)"
+          (keydown.space)="$event.preventDefault();selectRouteMarker(point.id)">
+          <circle class="map-touch-target" [attr.cx]="x(point.p.x)"
+            [attr.cy]="y(point.p.y)" r="17"/>
+          <circle [attr.cx]="x(point.p.x)" [attr.cy]="y(point.p.y)"
+            r="7" [attr.fill]="point.arrival?'#efce95':'#a9d6a1'"
+            stroke="#0c1710" stroke-width="2"/>
+          <text class="map-route-label" [attr.x]="x(point.p.x)+11"
+            [attr.y]="y(point.p.y)+15">
+            {{point.name}}
+          </text>
+        </g>
       }
       @for(marker of markers;track marker.id){
         <g class="map-point" role="button" tabindex="0"

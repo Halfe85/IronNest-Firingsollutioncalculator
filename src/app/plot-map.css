@@ -50,3 +50,13 @@
 @media(prefers-reduced-motion:reduce){
   .map-navigation button{transition:none}
 }
+
+/* Unified tactical-map route overlays, sharing the same SVG camera. */
+.map-route-segment{stroke:#d2bd82;stroke-width:3.5;stroke-dasharray:9 5;pointer-events:none}
+.map-route-point{cursor:pointer}
+.map-route-label{
+  font-size:10px;font-weight:850;fill:#e3eab6;
+  paint-order:stroke;stroke:#0b1910;stroke-width:3px;pointer-events:none
+}
+.map-route-point:focus-visible .map-touch-target{stroke:#ffffff;stroke-width:2}
+.map-route-point:hover circle:not(.map-touch-target){stroke:#fff0af;stroke-width:3}

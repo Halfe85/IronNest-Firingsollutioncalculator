@@ -1,0 +1,265 @@
+@if(screen()){
+<div class="route-planner-overlay" role="presentation" (click)="close()">
+  <section class="route-planner-window" role="dialog" aria-modal="true"
+    [attr.aria-label]="screen()==='select'?'Select waypoint route':
+      screen()==='config'?'Route configuration':
+      screen()==='waypoints'?'Route waypoint list':'Edit waypoint'"
+    (click)="$event.stopPropagation()">
+    <header class="route-window-head">
+      <div>
+        <span class="route-eyebrow">TACTICAL MAP · MOVING TARGETS</span>
+        <h2>{{screen()==='select'?'Waypoint Routes':
+          screen()==='config'?'Route Configuration':
+          screen()==='waypoints'?'Waypoints':'Waypoint Editor'}}</h2>
+      </div>
+      <button class="route-close" type="button" (click)="close()"
+        aria-label="Close waypoint windows">×</button>
+    </header>
+    @if(screen()==='select'){
+      <div class="route-scroll">
+        <p class="route-help">Each named moving-target route owns its waypoints.
+          Routes and markers appear on the tactical map, but do not count as references.</p>
+        <div class="route-list">
+          @for(route of routes();track route.id){
+            <button type="button" class="route-list-row" (click)="selectRoute(route.id)">
+              <span class="route-list-icon">⌁</span>
+              <span class="route-list-text">
+                <strong>{{route.name}}</strong>
+                <small>{{route.stops.length}} waypoints · {{route.targetLabel}}</small>
+              </span>
+              <span aria-hidden="true">›</span>
+            </button>
+          }@empty{
+            <div class="route-empty">No routes yet. Create the first route to place waypoints.</div>
+          }
+        </div>
+        <p class="route-help">Older Waypoint Tracker saved routes are imported when available, without deleting the old data.</p>
+      </div>
+      <footer class="route-window-foot">
+        <button type="button" class="route-secondary" (click)="close()">Close</button>
+        <button type="button" class="route-primary" [disabled]="routes().length>=25"
+          (click)="newRoute()">+ NEW ROUTE</button>
+      </footer>
+    }@else if(screen()==='config'){
+      <div class="route-scroll">
+        <p class="route-help">Set the route's name and arrival/reference point. Iron Nest is already shared with the Tactical Map.</p>
+        <label class="route-field">
+          <span>ROUTE NAME</span>
+          <input type="text" maxlength="60" [value]="routeDraft()?.name??''"
+            (input)="setRouteName($any($event.target).value)" placeholder="e.g. High Tide">
+        </label>
+        <label class="route-field">
+          <span>MOVING TARGET LABEL</span>
+          <input type="text" maxlength="50" [value]="routeDraft()?.targetLabel??''"
+            (input)="setRouteTarget($any($event.target).value)" placeholder="e.g. Train">
+        </label>
+        <label class="route-field">
+          <span>ARRIVAL / STATION REFERENCE</span>
+          <select [value]="routeDraft()?.stationReferenceId??'manual'"
+            (change)="setArrivalSource($any($event.target).value)">
+            <option value="manual">Enter arrival grid coordinates</option>
+            @for(origin of originsState();track origin.id){
+              <option [value]="origin.id">{{origin.name}} · {{origin.grid}}</option>
+            }
+          </select>
+        </label>
+        @if(!routeDraft()?.stationReferenceId){
+          <div class="route-grid-card">
+            <strong>ARRIVAL GRID</strong>
+            <app-grid-select
+              [value]="gridInputFromText(routeDraft()?.stationGrid??'')??emptyGrid"
+              (valueChange)="setArrivalGrid($event)"></app-grid-select>
+            @if(!routeDraft()?.stationGrid){<small>Select a grid field to confirm the arrival point.</small>}
+          </div>
+        }@else{
+          <div class="route-resolved">Arrival · {{arrivalGrid()||'REFERENCE UNRESOLVED'}}</div>
+        }
+        <div class="route-field-pair">
+          <label class="route-field">
+            <span>DEFAULT ROUTE BEARING (OPTIONAL)</span>
+            <input type="text" inputmode="decimal" [value]="routeDraft()?.railBearing??''"
+              (input)="setRouteBearing($any($event.target).value)" placeholder="0–360°">
+          </label>
+          <label class="route-field">
+            <span>DIRECTION FROM REFERENCE</span>
+            <select [value]="routeDraft()?.approachSide??'bearing'"
+              (change)="setRouteDirection($any($event.target).value)">
+              <option value="bearing">Bearing</option>
+              <option value="opposite">Opposite bearing</option>
+            </select>
+          </label>
+        </div>
+        <p class="route-help">You can override bearing and direction for individual waypoints, including routes with turns.</p>
+        @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
+      </div>
+      <footer class="route-window-foot">
+        <button type="button" class="route-secondary" (click)="back()">Back</button>
+        <button type="button" class="route-primary" [disabled]="!canSaveConfig()"
+          (click)="saveRoute()">SAVE ROUTE</button>
+      </footer>
+    }@else if(screen()==='waypoints'){
+      <div class="route-scroll">
+        @if(currentRoute();as route){
+          <div class="route-summary">
+            <div>
+              <span class="route-eyebrow">ACTIVE ROUTE</span>
+              <h3>{{route.name}}</h3>
+              <small>Arrival · {{route.stationReferenceId?
+                (geometry()?.grids?.[route.stops.length-1]??'UNRESOLVED'):
+                route.stationGrid}}</small>
+            </div>
+            <button class="route-secondary" type="button" (click)="editRoute()">CONFIGURE</button>
+          </div>
+          <p class="route-help">Tap a waypoint to open its own editor. The path updates on the tactical map when you save changes.</p>
+          <div class="route-stop-list">
+            @for(entry of routeEntries();track entry.stop.id){
+              <button type="button" class="route-stop-row" (click)="openStop(entry.stop.id!)">
+                <span class="route-stop-number">{{entry.index+1}}</span>
+                <span class="route-stop-desc">
+                  <strong>{{entry.stop.name}}</strong>
+                  <small>{{entry.grid??entry.error??'COORDINATES NOT SET'}}</small>
+                </span>
+                <span class="route-stop-time">{{entry.stop.time||'NO TIME'}}</span>
+                <span aria-hidden="true">›</span>
+              </button>
+            }
+          </div>
+          <div class="route-timing-field">
+            <label class="route-field">
+              <span>OPTIONAL CONSTANT SPEED · KM/H</span>
+              <input type="text" inputmode="decimal" [value]="route.routeSpeed"
+                (input)="setSpeed($any($event.target).value)" placeholder="e.g. 36">
+            </label>
+            <button type="button" class="route-secondary" (click)="fillTimes()">
+              CALCULATE MISSING TIMES</button>
+          </div>
+          <p class="route-help">Enter at least one real game-clock time before filling missing times. Existing reports are never overwritten.</p>
+          <button type="button" class="route-delete" (click)="deleteRoute()">Delete route</button>
+          @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
+        }
+      </div>
+      <footer class="route-window-foot">
+        <button type="button" class="route-secondary" (click)="back()">Routes</button>
+        <button type="button" class="route-primary"
+          [disabled]="!currentRoute()||currentRoute()!.stops.length>=12"
+          (click)="newStop()">+ ADD WAYPOINT</button>
+      </footer>
+    }@else if(screen()==='editor'){
+      <div class="route-scroll">
+        @if(stopDraft();as stop){
+          <p class="route-help">Edit one waypoint at a time; changes are applied only after Save Waypoint.</p>
+          <label class="route-field">
+            <span>WAYPOINT NAME</span>
+            <input type="text" maxlength="30" [value]="stop.name"
+              (input)="setStopText('name',$any($event.target).value)">
+          </label>
+          <div class="route-field-pair">
+            <label class="route-field">
+              <span>DISTANCE TO ARRIVAL · KM</span>
+              <input type="text" inputmode="decimal"
+                [value]="stop.kmFromStation"
+                [disabled]="currentRoute()?.stops?.[currentRoute()!.stops.length-1]?.id===stop.id"
+                (input)="setStopNumber('kmFromStation',$any($event.target).value)">
+            </label>
+            <label class="route-field">
+              <span>REPORTED GAME TIME</span>
+              <input type="text" inputmode="numeric" placeholder="12:34:56"
+                [value]="stop.time" (input)="setStopText('time',$any($event.target).value)">
+            </label>
+          </div>
+          @if(currentRoute()?.stops?.[currentRoute()!.stops.length-1]?.id!==stop.id){
+            <label class="route-field">
+              <span>POSITION METHOD</span>
+              <select [value]="stop.method??'route'"
+                (change)="setStopOption('method',$any($event.target).value)">
+                <option value="manual">Exact grid coordinates</option>
+                <option value="observed">Observed grid report</option>
+                <option value="route">Calculated bearing and distance</option>
+                <option value="relative">Relative to reference or waypoint</option>
+              </select>
+            </label>
+            @if(stop.method==='manual'||stop.method==='observed'){
+              <div class="route-grid-card">
+                <strong>{{stop.method==='observed'?'OBSERVED COORDINATES':'EXACT COORDINATES'}}</strong>
+                <app-grid-select [value]="stopGrid()" (valueChange)="setStopGrid($event)"></app-grid-select>
+                @if(!stop.grid){<small>Choose a grid field to confirm this position.</small>}
+              </div>
+            }@else{
+              <label class="route-field">
+                <span>POSITION ORIGIN</span>
+                @if(stop.method==='relative'){
+                  <select [value]="stop.relativeTo??'arrival'"
+                    (change)="setStopOption('relativeTo',$any($event.target).value)">
+                    @for(source of sourceOptions();track source.id){
+                      <option [value]="source.id">{{source.name}}</option>
+                    }
+                  </select>
+                }@else{
+                  <select [value]="stop.routeReferenceId??'arrival'"
+                    (change)="setStopOption('routeReferenceId',$any($event.target).value)">
+                    @for(source of sourceOptions();track source.id){
+                      <option [value]="source.id">{{source.name}}</option>
+                    }
+                  </select>
+                }
+              </label>
+              <div class="route-field-pair">
+                <label class="route-field">
+                  <span>BEARING · DEGREES</span>
+                  @if(stop.method==='relative'){
+                    <input type="text" inputmode="decimal"
+                      [value]="getRelativeNumber('relativeBearing')"
+                      (input)="setStopNumber('relativeBearing',$any($event.target).value)">
+                  }@else{
+                    <input type="text" inputmode="decimal" [value]="getStopBearing()"
+                      (input)="setStopNumber('routeBearing',$any($event.target).value)"
+                      [placeholder]="currentRoute()?.railBearing||'0–360'">
+                  }
+                </label>
+                <label class="route-field">
+                  <span>GEOMETRIC OFFSET · KM</span>
+                  @if(stop.method==='relative'){
+                    <input type="text" inputmode="decimal" [value]="getRelativeNumber('relativeKm')"
+                      (input)="setStopNumber('relativeKm',$any($event.target).value)">
+                  }@else{
+                    <input type="text" inputmode="decimal" [value]="getStopDistance()"
+                      (input)="setStopNumber('routeDistanceKm',$any($event.target).value)">
+                  }
+                </label>
+              </div>
+              <label class="route-field">
+                <span>DIRECTION</span>
+                @if(stop.method==='relative'){
+                  <select [value]="stop.relativeDirection??'bearing'"
+                    (change)="setStopOption('relativeDirection',$any($event.target).value)">
+                    <option value="bearing">Bearing</option><option value="opposite">Opposite</option>
+                  </select>
+                }@else{
+                  <select [value]="stop.routeDirection??currentRoute()?.approachSide??'bearing'"
+                    (change)="setStopOption('routeDirection',$any($event.target).value)">
+                    <option value="bearing">Bearing</option><option value="opposite">Opposite</option>
+                  </select>
+                }
+              </label>
+            }
+          }@else{
+            <div class="route-resolved">
+              Arrival position is managed by Route Configuration.
+            </div>
+          }
+          @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
+          @if(currentRoute() && currentRoute()!.stops.length>2 &&
+             currentRoute()!.stops[currentRoute()!.stops.length-1].id!==stop.id &&
+             currentRoute()!.stops.some(s=>s.id===stop.id)){
+            <button type="button" class="route-delete" (click)="deleteStop()">Delete waypoint</button>
+          }
+        }
+      </div>
+      <footer class="route-window-foot">
+        <button type="button" class="route-secondary" (click)="back()">Back</button>
+        <button type="button" class="route-primary" (click)="saveStop()">SAVE WAYPOINT</button>
+      </footer>
+    }
+  </section>
+</div>
+}
