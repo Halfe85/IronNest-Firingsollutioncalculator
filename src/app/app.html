@@ -63,7 +63,8 @@
         </section>
       }
       @if(tab()==='plot'){
-        <app-tactical-plotter (fireSolution)="addFromPlot($event)"></app-tactical-plotter>
+        <app-tactical-plotter (fireSolution)="addFromPlot($event)"
+          (clearFiringSolutions)="clearFiringSolutions()"></app-tactical-plotter>
       }
       @if(tab()==='shots'){
         <section class="shots-workspace" aria-label="Firing solutions">

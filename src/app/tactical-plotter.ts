@@ -5,14 +5,14 @@ import {TrainTrackerComponent,type MovingFireRequest} from './train-tracker';
 import {PlotMapComponent,type MapObservationMarker} from './plot-map';
 import {
   gridInputLabel, solvePlotGraph, firingFromPlot, updateIntelReport,
-  type GridInput, type IntelNode, type NodeRole
+  gridInputToPoint, EMPTY_GRID, type GridInput, type IntelNode, type IntelReport, type NodeRole
 } from './graph-math';
 import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
 import {cannonOrUnassigned, normalizeShell, type Cannon} from './shot-options';
 import {sessionDb} from './session-db';
 
-export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon;}
+export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon; stayOnPlot?:boolean;}
 function clone(src:readonly IntelNode[]):IntelNode[]{
   return src.map(n=>({...n,grid:n.grid?{...n.grid}:undefined,
     reports:n.reports.map(r=>({...r}))}));
@@ -30,9 +30,23 @@ export class TacticalPlotterComponent{
   @Output() clearFiringSolutions=new EventEmitter<void>();
   readonly hydrated=signal(false);
   readonly nodes=signal<IntelNode[]>([{
-    id:'nest',name:'Iron Nest',role:'nest',grid:{letter:'A',column:1,x:0,y:0},reports:[]
+    id:'nest',name:'Iron Nest',role:'nest',reports:[]
   }]);
-  readonly modal=signal<'map'|'node'|null>(null);
+  readonly modal=signal<'map'|'node'|'add'|null>(null);
+  readonly filterOpen=signal(false);
+  readonly hiddenReportIds=signal<string[]>([]);
+  readonly draftRole=signal<Exclude<NodeRole,'nest'>>('spotter');
+  readonly draftMethod=signal<'coordinates'|'reports'>('coordinates');
+  readonly draftName=signal('');
+  readonly draftGrid=signal<GridInput|null>(null);
+  readonly draftNest=signal<GridInput|null>(null);
+  readonly draftReports=signal<IntelReport[]>([]);
+  readonly draftCandidate=signal<number|null>(null);
+  readonly draftShell=signal('HCHE');
+  readonly draftCannon=signal<Cannon>('left');
+  readonly draftError=signal('');
+  readonly emptyGrid=EMPTY_GRID;
+  readonly compassOptions=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   readonly activeId=signal<string|null>(null);
   readonly status=signal('');
   readonly plottingMode=signal<'normal'|'waypoint'>('normal');
@@ -50,6 +64,48 @@ export class TacticalPlotterComponent{
   readonly targets=computed(()=>this.nodes().filter(n=>n.role==='target'));
   readonly active=computed(()=>this.nodes().find(n=>n.id===this.activeId()));
   readonly activeResult=computed(()=>this.solution().get(this.activeId()??''));
+  readonly nestConfirmed=computed(()=>!!this.nest()?.grid &&
+    !!gridInputToPoint(this.nest()!.grid!));
+  readonly availableOrigins=computed(()=>{
+    const draftNest=this.draftNest();
+    return this.nodes().filter(n=>n.role==='nest'
+      ? !!gridInputToPoint(draftNest??n.grid??EMPTY_GRID) && !!(draftNest||n.grid)
+      : !!this.solution().get(n.id)?.position);
+  });
+  readonly draftSolved=computed(()=>{
+    if(this.draftRole()==='spotter'||this.draftMethod()==='coordinates')return null;
+    const reports=this.draftReports();
+    const nestGrid=this.draftNest()??this.nest()?.grid;
+    const working=this.nodes().map(n=>n.role==='nest'&&nestGrid?{...n,grid:nestGrid}:n);
+    const proposed:IntelNode={id:'__new_point__',name:'Draft',role:this.draftRole(),
+      reports,chosenCandidate:this.draftCandidate()};
+    return solvePlotGraph([...working,proposed]).get('__new_point__')??null;
+  });
+  readonly draftPosition=computed(()=>{
+    if(this.draftRole()==='spotter'||this.draftMethod()==='coordinates')
+      return this.draftGrid()?gridInputToPoint(this.draftGrid()!):null;
+    return this.draftSolved()?.position??null;
+  });
+  readonly draftReportsValid=computed(()=>{
+    const sources=new Set(this.availableOrigins().map(n=>n.id));
+    return this.draftReports().length>0&&this.draftReports().every(report=>{
+      if(!sources.has(report.sourceId))return false;
+      if(report.type==='sector')return compassCenter(report.value)!==null;
+      const n=Number(report.value.trim().replace(',','.'));
+      return report.value.trim()!==''&&Number.isFinite(n)&&
+        (report.type==='bearing'?(n>=0&&n<=360):n>0&&n<=40);
+    });
+  });
+  readonly canAddDraft=computed(()=>{
+    const nest=this.draftNest()??this.nest()?.grid;
+    if(!nest||!gridInputToPoint(nest))return false;
+    if(this.draftRole()==='reference'&&!this.draftName().trim())return false;
+    if(this.draftRole()==='spotter'||this.draftMethod()==='coordinates')
+      return !!this.draftPosition();
+    if(!this.draftReportsValid())return false;
+    if(this.draftRole()==='target')return !!this.draftPosition();
+    return true;
+  });
   readonly originOptions=computed(()=>this.nodes().filter(n=>n.id!==this.activeId()));
   readonly mapMarkers=computed(()=>this.solution().results.flatMap(result=>{
     if(result.position)return [{
@@ -63,6 +119,39 @@ export class TacticalPlotterComponent{
     return [];
   }));
   readonly formatGrid=formatGrid;
+  readonly reportRows=computed(()=>this.nodes().flatMap(node=>
+    node.reports.map(report=>({
+      id:report.id,
+      label:node.name+' · '+(this.nodes().find(n=>n.id===report.sourceId)?.name??'Unknown')+
+        ' · '+(report.type==='range'?report.value+' km':
+          report.type==='bearing'?report.value+'°':report.value),
+      role:node.role
+    }))
+  ));
+  readonly allObservations=computed<MapObservationMarker[]>(()=>{
+    const solved=this.solution();
+    return this.nodes().flatMap(node=>node.reports.flatMap(report=>{
+      const source=solved.get(report.sourceId)?.position;
+      if(!source)return [];
+      let value:number;
+      if(report.type==='sector'){
+        const compass=compassCenter(report.value);
+        if(compass===null)return [];
+        value=compass;
+      }else{
+        if(!report.value.trim())return [];
+        value=Number(report.value.replace(',','.'));
+        if(!Number.isFinite(value)||
+          (report.type==='bearing'&&(value<0||value>360))||
+          (report.type==='range'&&value<=0))return [];
+      }
+      return [{id:report.id,source,type:report.type,value}];
+    }));
+  });
+  readonly visibleObservations=computed(()=>{
+    const excluded=new Set(this.hiddenReportIds());
+    return this.allObservations().filter(report=>!excluded.has(report.id));
+  });
   readonly nestGridText=computed(()=>this.solution().get('nest')?.position
     ?formatGrid(this.solution().get('nest')!.position!):null);
   readonly activeObservations=computed<MapObservationMarker[]>(()=>{
@@ -91,7 +180,7 @@ export class TacticalPlotterComponent{
       if(!this.hydrated())return;
       void sessionDb.write('plotter',{
         nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
-        plottingMode:this.plottingMode()
+        plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds()
       });
     });
   }
@@ -99,10 +188,12 @@ export class TacticalPlotterComponent{
     try{
       const data=await sessionDb.read<{
         nodes?:IntelNode[];targetLoadouts?:Record<string,{shell?:unknown;cannon?:unknown}>;
-        plottingMode?:'normal'|'waypoint';
+        plottingMode?:'normal'|'waypoint';hiddenReportIds?:string[];
       }>('plotter');
       if(!data)return;
       if(data.plottingMode==='waypoint')this.plottingMode.set('waypoint');
+      if(Array.isArray(data.hiddenReportIds))
+        this.hiddenReportIds.set(data.hiddenReportIds.filter((id):id is string=>typeof id==='string'));
       if(Array.isArray(data.nodes)&&data.nodes.length>0&&data.nodes.length<=70&&
         data.nodes.every(n=>n&&typeof n.id==='string'&&
           typeof n.name==='string'&&['nest','spotter','reference','target'].includes(n.role)&&
@@ -123,12 +214,13 @@ export class TacticalPlotterComponent{
     // Flush the last modal edit before Angular destroys this tab's component.
     if(this.hydrated())void sessionDb.write('plotter',{
       nodes:this.nodes(),targetLoadouts:this.targetLoadouts(),
-      plottingMode:this.plottingMode()
+      plottingMode:this.plottingMode(),hiddenReportIds:this.hiddenReportIds()
     });
   }
   @HostListener('document:keydown.escape')
   closeModal():void{
     this.modal.set(null);this.activeId.set(null);this.observationMapVisible.set(false);
+    this.draftError.set('');
   }
   setMode(mode:'normal'|'waypoint'):void{this.plottingMode.set(mode);this.closeModal();}
   showMapFromObservations():void{this.modal.set('map');}
@@ -155,11 +247,114 @@ export class TacticalPlotterComponent{
     void sessionDb.clear('waypoint');
     this.plottingMode.set('normal');
     this.targetLoadouts.set({});
-    this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',
-      grid:{letter:'A',column:1,x:0,y:0},reports:[]}]);
+    this.nodes.set([{id:'nest',name:'Iron Nest',role:'nest',reports:[]}]);
+    this.hiddenReportIds.set([]);this.filterOpen.set(false);
     this.status.set('Set Iron Nest grid, add spotters and then reference points or targets.');
     this.closeModal();
   }
+
+  openAddReference():void{
+    this.closeModal();
+    this.filterOpen.set(false);
+    this.draftRole.set('spotter');
+    this.draftMethod.set('coordinates');
+    this.draftName.set('');
+    this.draftGrid.set(null);
+    this.draftNest.set(this.nest()?.grid??null);
+    this.draftReports.set([]);
+    this.draftCandidate.set(null);
+    this.draftShell.set('HCHE');
+    this.draftCannon.set('left');
+    this.modal.set('add');
+  }
+  changeDraftRole(value:string):void{
+    if(value!=='spotter'&&value!=='reference'&&value!=='target')return;
+    this.draftRole.set(value);
+    this.draftMethod.set('coordinates');
+    this.draftName.set('');
+    this.draftGrid.set(null);
+    this.draftReports.set([]);
+    this.draftCandidate.set(null);
+    this.draftError.set('');
+  }
+  changeDraftMethod(value:string):void{
+    if(value!=='coordinates'&&value!=='reports')return;
+    if(this.draftRole()==='spotter'&&value==='reports')return;
+    this.draftMethod.set(value);
+    this.draftGrid.set(null);
+    this.draftReports.set([]);
+    this.draftCandidate.set(null);
+    this.draftError.set('');
+  }
+  updateDraftName(value:string):void{this.draftName.set(value.slice(0,48));}
+  addDraftReport():void{
+    if(this.draftReports().length>=12)return;
+    const source=this.availableOrigins()[0];
+    if(!source){this.draftError.set('Set Iron Nest coordinates or add a spotter first.');return;}
+    this.draftReports.update(reports=>[...reports,{
+      id:uid(),sourceId:source.id,type:'bearing',value:''
+    }]);
+    this.draftCandidate.set(null);
+    this.draftError.set('');
+  }
+  updateDraftReport(id:string,key:'sourceId'|'type'|'value',value:string):void{
+    this.draftReports.update(reports=>reports.map(r=>
+      r.id===id?updateIntelReport(r,key,value):r));
+    this.draftCandidate.set(null);
+    this.draftError.set('');
+  }
+  removeDraftReport(id:string):void{
+    this.draftReports.update(reports=>reports.filter(r=>r.id!==id));
+    this.draftCandidate.set(null);
+  }
+  toggleReportVisibility(id:string):void{
+    this.hiddenReportIds.update(ids=>ids.includes(id)?ids.filter(v=>v!==id):[...ids,id]);
+  }
+  setAllReportsVisible(visible:boolean):void{
+    this.hiddenReportIds.set(visible?[]:this.reportRows().map(r=>r.id));
+  }
+  addReference():void{
+    if(!this.canAddDraft()){
+      this.draftError.set('Set Iron Nest and enter valid coordinates or reports. Targets must have a resolved position.');
+      return;
+    }
+    const role=this.draftRole();
+    const index=this.nodes().filter(n=>n.role===role).length+1;
+    const padded=String(index).padStart(2,'0');
+    const suffix=this.draftName().trim();
+    const name=role==='spotter'?'Spotter #'+padded:
+      role==='reference'?'Reference - '+suffix:
+      'Target #'+padded+(suffix?' - '+suffix:'');
+    const coordinateMode=role==='spotter'||this.draftMethod()==='coordinates';
+    const node:IntelNode={
+      id:role+'-'+uid(),role,name,
+      ...(coordinateMode?{grid:{...this.draftGrid()!}}:{}),
+      reports:coordinateMode?[]:this.draftReports().map(r=>({...r})),
+      ...(!coordinateMode&&this.draftCandidate()!==null?{chosenCandidate:this.draftCandidate()}: {})
+    };
+    const nestGrid=this.draftNest()??this.nest()?.grid;
+    if(!this.nestConfirmed()&&nestGrid)this.setNestGrid({...nestGrid});
+    this.nodes.update(nodes=>[...nodes,node]);
+    if(role==='target'){
+      const nestPos=nestGrid?gridInputToPoint(nestGrid):null;
+      const point=this.solution().get(node.id)?.position;
+      const fire=nestPos&&point?firingFromPlot(nestPos,point):null;
+      if(fire&&fire.grid&&fire.rangeKm>0&&fire.rangeKm<=30){
+        this.fireSolution.emit({label:node.name,bearing:fire.bearing,
+          distanceKm:fire.rangeKm,grid:fire.grid,
+          nestGrid:formatGrid(nestPos)??'',shell:this.draftShell(),
+          cannon:this.draftCannon(),stayOnPlot:true});
+        this.status.set(name+' added and firing solution created.');
+      }else{
+        // Never persist a target without its promised firing solution.
+        this.nodes.update(nodes=>nodes.filter(n=>n.id!==node.id));
+        this.draftError.set('Unable to create firing solution. Check range (0–30 km) and reports.');
+        return;
+      }
+    }else this.status.set(name+' added to map.');
+    this.closeModal();
+  }
+
   addNode(role:Exclude<NodeRole,'nest'>):void{
     const count=this.nodes().filter(n=>n.role===role).length+1;
     const id=role+'-'+uid();

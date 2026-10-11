@@ -143,3 +143,23 @@ test('proper forward intersections do not trigger the backwards-ray warning',()=
   const s3=gridInputToPoint(gridInputFromText('B2 7:9')!)!;
   assert.equal(bearingRayConflict(s3,73,s2,93),null);
 });
+
+test('directly entered coordinates resolve reference and target positions',()=>{
+  const nest={id:'nest',role:'nest' as const,name:'Iron Nest',
+    grid:gridInputFromText('B3 4:1')!,reports:[]};
+  const ref={id:'port',role:'reference' as const,name:'Reference - Port',
+    grid:gridInputFromText('E6 2:0')!,reports:[]};
+  const target={id:'vessel',role:'target' as const,name:'Target #01 - Vessel',
+    grid:gridInputFromText('F7 3:5')!,reports:[]};
+  const result=solvePlotGraph([nest,ref,target]);
+  assert.equal(result.get('port')?.status,'located');
+  assert.equal(result.get('vessel')?.status,'located');
+  const fire=firingFromPlot(result.get('nest')!.position!,result.get('vessel')!.position!);
+  assert.equal(fire.grid,'F7 3:5');
+  assert.ok(fire.rangeKm>0);
+});
+test('unset Iron Nest is not silently treated as A1 0:0',()=>{
+  const graph=solvePlotGraph([{id:'nest',name:'Iron Nest',role:'nest',reports:[]}]);
+  assert.equal(graph.get('nest')?.position,null);
+  assert.equal(graph.get('nest')?.status,'missing');
+});

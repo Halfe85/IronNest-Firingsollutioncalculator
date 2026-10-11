@@ -107,3 +107,67 @@
  .map-preview-actions button{min-height:35px}
 }
 @media(max-height:540px){.observation-map-panel .map-viewport{max-height:95px}}
+
+/* Map-first Tactical Plotter — occupy the whole view, not a nested map modal. */
+:host{display:flex;flex:1;min-width:0;min-height:0}
+.plot-layout{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;background:#0c1510}
+.plot-map-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;min-height:60px;padding:7px clamp(8px,1.5vw,18px);background:#15231a;border-bottom:1px solid #42543e}
+.plot-toolbar-left,.plot-map-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.plot-mode-inline select{height:40px;min-width:0;max-width:170px;background:#27392a;color:#f3deb8;border:1px solid #54694d;border-radius:5px;padding:6px 8px;font-size:11px;font-weight:850}
+.plot-nest-indicator{font-size:11px;font-weight:850;letter-spacing:.35px;white-space:nowrap;color:#c5ddb5}
+.plot-nest-indicator.missing{color:#ffa896}
+.plot-map-actions button{min-height:41px;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:850;white-space:nowrap}
+.add-reference-button{background:#eab978;color:#1a261a;border:1px solid #f5d09b}
+.filter-button{background:#283a2d;color:#e4efde;border:1px solid #829078}
+.filter-button span{font-size:9px}
+.plot-main-map{flex:1;min-width:0;min-height:0;overflow:hidden;position:relative}
+.plot-main-map>app-plot-map{height:100%;width:100%;display:block}
+.plot-filter-panel{position:absolute;right:clamp(8px,2vw,20px);top:116px;z-index:25;display:grid;gap:9px;width:min(390px,calc(100% - 16px));max-height:min(60dvh,480px);overflow:hidden;background:#1b2b21;border:1px solid #9b936b;border-radius:9px;box-shadow:0 16px 38px #000b;padding:12px}
+.plot-filter-head{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11px}
+.plot-filter-head>div{display:flex;gap:6px}
+.plot-filter-head button,.plot-new-mission{background:#304535;border:1px solid #65805e;border-radius:5px;color:#e5e8d5;min-height:34px;font-size:10px;font-weight:750;padding:6px 8px}
+.plot-filter-list{display:grid;gap:4px;overflow:auto;min-height:0}
+.plot-report-filter{display:flex;align-items:center;gap:8px;min-height:39px;background:#102016;border:1px solid #374b3a;border-radius:5px;padding:6px 8px;font-size:11px;color:#e7ecd8}
+.plot-report-filter input{width:18px;height:18px;flex:none;accent-color:#e7b772}
+.plot-filter-list p{font-size:11px;color:#b3bea9;line-height:1.5}
+.plot-new-mission{justify-self:start}
+.plot-bottom-status{background:#29432d;color:#e6f3db;flex:none;padding:5px 12px;font-size:11px}
+.plot-add-dialog{display:flex;flex-direction:column;min-height:0;max-height:calc(100dvh - 20px);width:min(670px,100%);overflow:hidden}
+.plot-add-dialog .dialog-heading{flex:none}
+.plot-add-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 3px 8px;overscroll-behavior:contain}
+.plot-add-scroll .field-label select{width:100%;min-height:44px;background:#111d15;color:#f0ebd9;border:1px solid #54694e;border-radius:6px;padding:8px;font-size:15px}
+.plot-add-type{display:grid;gap:4px;margin:10px 0}
+.plot-required-nest,.plot-add-coordinates,.plot-add-reports{display:grid;gap:9px;border:1px solid #526d53;border-radius:8px;background:#111f17;padding:12px;margin:8px 0}
+.plot-required-nest{border-color:#cf9876;background:#2b241c}
+.plot-required-nest>strong,.plot-add-coordinates>strong,.plot-add-reports strong{font-size:11px;color:#edd4a4;letter-spacing:.5px}
+.plot-required-nest p,.plot-required-nest small,.plot-add-coordinates small{font-size:11px;color:#d2c4a6;line-height:1.5;margin:0}
+.plot-inline-note{color:#b5c9b2;font-size:11px;line-height:1.5;margin:3px 0 8px}
+.plot-method-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0}
+.plot-method-row button{min-height:43px;background:#223429;color:#c9d7bf;border:1px solid #54654d;border-radius:6px;font-size:12px;font-weight:800}
+.plot-method-row button.active{background:#5b4d2c;color:#ffdfac;border-color:#efc587}
+.plot-add-report-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plot-add-report-heading button{min-height:38px;padding:7px 12px;background:#28422e;color:#dff0d6;border:1px solid #6c946d;border-radius:6px;font-weight:800}
+.plot-add-report-heading button:disabled{opacity:.35}
+.plot-draft-result{display:grid;gap:7px;font-size:11px;color:#cbdcba;padding:9px;background:#1c3223;border:1px solid #4f684e;border-radius:6px}
+.plot-draft-result strong{font-size:15px;color:#eed1a3}
+.plot-draft-error{font-size:12px;color:#ffb4a1;border:1px solid #a96552;background:#35231d;padding:9px;border-radius:6px}
+.plot-add-footer{flex:none;display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid #435546;margin-top:8px}
+.plot-add-footer button{min-height:46px}
+.plot-waypoint-top{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:9px;background:#17261b;border-bottom:1px solid #4d6048;font-size:12px}
+.plot-waypoint-top button{border:1px solid #6b845f;background:#29392a;color:#f3d7a5;padding:9px 12px;border-radius:6px}
+.plot-waypoint-body{flex:1;min-height:0;overflow:auto}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:700px){
+ .plot-map-toolbar{min-height:55px;flex-wrap:wrap;padding:5px 8px;gap:4px}
+ .plot-toolbar-left{flex:1;justify-content:space-between}
+ .plot-mode-inline select{min-height:36px;height:36px;max-width:135px;font-size:9px}
+ .plot-nest-indicator{font-size:9px}
+ .plot-map-actions{width:100%;justify-content:flex-end}
+ .plot-map-actions button{min-height:39px;padding:6px 9px;font-size:10px}
+ .plot-filter-panel{top:150px}
+ .plot-add-dialog{padding:9px}
+ .plot-add-scroll .intel-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px}
+ .plot-add-scroll .intel-line label:nth-child(3){grid-column:1/3;grid-row:2}
+ .plot-add-scroll .intel-line .remove-intel{grid-column:3;grid-row:1/3;height:100%}
+}
+@media(prefers-reduced-motion:reduce){.plot-method-row button,.plot-map-actions button{transition:none}}

@@ -446,6 +446,8 @@ export class AppComponent {
     const target=data.grid?parseGrid(data.grid):null;
     this.makeShot({...data,charges:charge,shell:data.shell,cannon:data.cannon,
       nestPosition:origin,targetPosition:target});
+    // Automatically create a target's firing solution without leaving the map.
+    if(data.stayOnPlot)this.tab.set('plot');
   }
   private stopHitFade():void{
     if(this.hitFadeTimer!==null)clearTimeout(this.hitFadeTimer);

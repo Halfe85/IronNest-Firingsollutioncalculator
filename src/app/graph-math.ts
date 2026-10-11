@@ -165,7 +165,9 @@ export function bearingRayConflict(a:Point,aBearing:number,b:Point,bBearing:numb
 export function solvePlotGraph(nodes:readonly IntelNode[]):PlotGraph{
   const computed=new Map<string,PlotNode>();
   for(const node of nodes){
-    if(node.role==='spotter'||node.role==='nest'){
+    // Direct coordinate entries can locate reference points and targets too.
+    // Reports are empty for coordinate-mode nodes, avoiding contradictory inputs.
+    if(node.role==='spotter'||node.role==='nest'||(node.grid&&node.reports.length===0)){
       const point=node.grid?gridInputToPoint(node.grid):null;
       computed.set(node.id,{
         node,status:point?'located':'missing',

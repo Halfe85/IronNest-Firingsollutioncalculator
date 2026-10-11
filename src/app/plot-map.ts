@@ -1,4 +1,4 @@
-import {Component, Input} from '@angular/core';
+import {Component, EventEmitter, Input, Output} from '@angular/core';
 import {type Point} from './map-math';
 export interface MapPointMarker {id:string; name:string; role:string; p:Point; grid:string|null;}
 export interface MapObservationMarker {id:string;type:'range'|'bearing'|'sector';source:Point;value:number;}
@@ -10,6 +10,10 @@ export class PlotMapComponent {
   @Input() markers:readonly MapPointMarker[]=[];
   @Input() observations:readonly MapObservationMarker[]=[];
   @Input() highlightId:string|null=null;
+  @Output() markerSelect=new EventEmitter<string>();
+  selectMarker(id:string):void{
+    if(!id.includes('-option-'))this.markerSelect.emit(id);
+  }
   readonly columns='ABCDEFGHIJKLMNOPQRST'.split('');
   readonly rows=Array.from({length:10},(_,i)=>10-i);
   x(x:number):number{return 45+x*44;}

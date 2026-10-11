@@ -1,67 +1,208 @@
-<div class="plot-mode-selector">
-  <label><span>AUTO PLOTTER MODE</span>
-    <select [value]="plottingMode()" (change)="setMode($any($event.target).value)">
-      <option value="normal">Observation</option>
-      <option value="waypoint">Waypoint</option>
-    </select>
-  </label>
-</div>
-@if(plottingMode()==='normal'){
-  <div class="plot-surface">
-    <div class="plot-quick-actions">
-      <button type="button" (click)="newMission()">NEW / CLEAR</button>
-      <button type="button" class="map-launch" (click)="openMap()">MAP ↗</button>
-    </div>
-  <div class="plot-nest">
-    <div class="section-label">IRON NEST <span>{{ nest() ? gridLabel(nest()!) : '—' }}</span></div>
-    @if(nest();as n){@if(n.grid){<app-grid-select [value]="n.grid" (valueChange)="setNestGrid($event)"></app-grid-select>}}
-  </div>
-  <div class="plot-section">
-    <div class="section-heading"><strong>SPOTTERS</strong><button type="button" (click)="addNode('spotter')">+ Spotter</button></div>
-    @if(!spotters().length){<p class="empty-note">Add observers and choose their grid coordinates.</p>}
-    <div class="spotter-chips">
-      @for(node of spotters();track node.id){
-        <button type="button" class="spotter-chip" (click)="openNode(node.id)">
-          <span>{{node.name}}</span><b>{{gridLabel(node)}}</b>
+<div class="plot-layout">
+  @if(plottingMode()==='normal'){
+    <div class="plot-map-toolbar">
+      <div class="plot-toolbar-left">
+        <label class="plot-mode-inline">
+          <span class="sr-only">Plotter mode</span>
+          <select [value]="plottingMode()" (change)="setMode($any($event.target).value)"
+            aria-label="Plotter mode">
+            <option value="normal">OBSERVATION MAP</option>
+            <option value="waypoint">WAYPOINT MODE</option>
+          </select>
+        </label>
+        <span class="plot-nest-indicator" [class.missing]="!nestConfirmed()">
+          IRON NEST · {{nestGridText()??'NOT SET'}}
+        </span>
+      </div>
+      <div class="plot-map-actions">
+        <button type="button" class="add-reference-button" (click)="openAddReference()">+ ADD REFERENCE</button>
+        <button type="button" class="filter-button"
+          [attr.aria-expanded]="filterOpen()" aria-controls="plot-report-filter"
+          (click)="filterOpen.set(!filterOpen())">FILTER
+          @if(hiddenReportIds().length){<span>({{hiddenReportIds().length}} hidden)</span>}
         </button>
-      }
-    </div>
-  </div>
-  <div class="plot-section">
-    <div class="section-heading">
-      <strong>REFERENCES & TARGETS</strong>
-      <div class="two-actions">
-        <button type="button" (click)="addNode('reference')">+ Reference</button>
-        <button type="button" (click)="addNode('target')">+ Target</button>
       </div>
     </div>
-    <div class="node-grid">
-      @for(node of references();track node.id){
-        <button type="button" class="node-card" (click)="openNode(node.id)">
-          <span class="role-icon">◇</span>
-          <span class="node-name">{{node.name}}<small>REFERENCE</small></span>
-          <span class="node-location" [class.unresolved]="!solution().get(node.id)?.position">{{plotLabel(node.id)}}</span>
-        </button>
-      }
-      @for(node of targets();track node.id){
-        <button type="button" class="node-card" (click)="openNode(node.id)">
-          <span class="role-icon hostile">⊕</span>
-          <span class="node-name">{{node.name}}<small>TARGET</small></span>
-          <span class="node-location" [class.unresolved]="!solution().get(node.id)?.position">{{plotLabel(node.id)}}</span>
-        </button>
-      }
-      @if(references().length+targets().length===0){
-        <p class="empty-note">Add a reference or target and record two observations to solve it.</p>
-      }
+    @if(filterOpen()){
+      <div class="plot-filter-panel" id="plot-report-filter">
+        <div class="plot-filter-head">
+          <strong>MAP REPORTS</strong>
+          <div>
+            <button type="button" (click)="setAllReportsVisible(true)">Show all</button>
+            <button type="button" (click)="setAllReportsVisible(false)">Hide all</button>
+          </div>
+        </div>
+        <div class="plot-filter-list">
+          @for(report of reportRows();track report.id){
+            <label class="plot-report-filter">
+              <input type="checkbox" [checked]="!hiddenReportIds().includes(report.id)"
+                (change)="toggleReportVisibility(report.id)">
+              <span>{{report.label}}</span>
+            </label>
+          }@empty{<p>No reports added yet. References created from observations will appear here.</p>}
+        </div>
+        <button type="button" class="plot-new-mission" (click)="newMission()">New / clear mission</button>
+      </div>
+    }
+    <div class="plot-main-map" aria-label="Full-screen observation map">
+      <app-plot-map [markers]="mapMarkers()" [observations]="visibleObservations()"
+        (markerSelect)="openNode($event)"></app-plot-map>
     </div>
-  </div>
-  @if(status()){<p class="plot-status" role="status">{{status()}}</p>}
+    @if(status()){<div class="plot-bottom-status" role="status">{{status()}}</div>}
+  }@else{
+    <div class="plot-waypoint-top">
+      <button type="button" (click)="setMode('normal')">← OBSERVATION MAP</button>
+      <strong>WAYPOINT TRACKER</strong>
+    </div>
+    <div class="plot-waypoint-body">
+      <app-train-tracker [currentNestGrid]="nestGridText()"
+        (clearFiringSolutions)="clearFiringSolutions.emit()"
+        (nestGridChange)="setNestGrid($event)"
+        (useSolution)="useMovingSolution($event)"></app-train-tracker>
+    </div>
+  }
 </div>
-} @else {
-  <app-train-tracker [currentNestGrid]="nestGridText()"
-    (clearFiringSolutions)="clearFiringSolutions.emit()"
-    (nestGridChange)="setNestGrid($event)"
-    (useSolution)="useMovingSolution($event)"></app-train-tracker>
+
+@if(modal()==='add'){
+<div class="plot-overlay" (click)="closeModal()" role="presentation">
+  <section class="plot-dialog plot-add-dialog" role="dialog" aria-modal="true"
+    aria-label="Add map reference" (click)="$event.stopPropagation()">
+    <header class="dialog-heading">
+      <div><span class="micro-label">TACTICAL PLOTTER</span><h2>Add Reference</h2></div>
+      <button type="button" class="close-x" (click)="closeModal()" aria-label="Cancel adding reference">×</button>
+    </header>
+    <div class="plot-add-scroll">
+      @if(!nestConfirmed()){
+        <section class="plot-required-nest">
+          <strong>1 · IRON NEST POSITION REQUIRED</strong>
+          <p>Set the Iron Nest grid before adding any reference. This position is saved when you press Add.</p>
+          <app-grid-select [value]="draftNest()??emptyGrid"
+            (valueChange)="draftNest.set($event)"></app-grid-select>
+          @if(!draftNest()){<small>Select a grid field to confirm the Iron Nest position.</small>}
+        </section>
+      }
+      <div class="plot-add-type">
+        <label class="field-label">
+          <span>REFERENCE TYPE</span>
+          <select aria-label="Reference type" [value]="draftRole()"
+            (change)="changeDraftRole($any($event.target).value)">
+            <option value="spotter">Spotter #XX</option>
+            <option value="reference">Reference - [Name]</option>
+            <option value="target">Target #XX - [Name optional]</option>
+          </select>
+        </label>
+        @if(draftRole()!=='spotter'){
+          <label class="field-label">
+            <span>{{draftRole()==='reference'?'REFERENCE NAME (REQUIRED)':'TARGET NAME (OPTIONAL)'}}</span>
+            <input type="text" maxlength="48" [value]="draftName()"
+              (input)="updateDraftName($any($event.target).value)"
+              [placeholder]="draftRole()==='reference'?'e.g. Dockmaster’s House':'e.g. Enemy cruiser'">
+          </label>
+        }@else{
+          <p class="plot-inline-note">Spotters are numbered automatically and placed by grid coordinates.</p>
+        }
+      </div>
+      @if(draftRole()!=='spotter'){
+        <div class="plot-method-row" role="group" aria-label="Position method">
+          <button type="button" [class.active]="draftMethod()==='coordinates'"
+            [attr.aria-pressed]="draftMethod()==='coordinates'"
+            (click)="changeDraftMethod('coordinates')">Coordinates</button>
+          <button type="button" [class.active]="draftMethod()==='reports'"
+            [attr.aria-pressed]="draftMethod()==='reports'"
+            (click)="changeDraftMethod('reports')">Reports</button>
+        </div>
+      }
+      @if(draftRole()==='spotter'||draftMethod()==='coordinates'){
+        <section class="plot-add-coordinates">
+          <strong>GRID COORDINATES</strong>
+          <app-grid-select [value]="draftGrid()??emptyGrid"
+            (valueChange)="draftGrid.set($event)"></app-grid-select>
+          @if(!draftGrid()){<small>Choose coordinates to position this point.</small>}
+        </section>
+      }@else{
+        <section class="plot-add-reports">
+          <div class="plot-add-report-heading">
+            <strong>INTELLIGENCE REPORTS</strong>
+            <button type="button" (click)="addDraftReport()"
+              [disabled]="draftReports().length>=12 || !availableOrigins().length">+ REPORT</button>
+          </div>
+          @for(report of draftReports();track report.id){
+            <div class="intel-line">
+              <label><span>FROM</span>
+                <select [value]="report.sourceId" (change)="updateDraftReport(report.id,'sourceId',$any($event.target).value)">
+                  @for(source of availableOrigins();track source.id){
+                    <option [value]="source.id">{{source.name}}</option>
+                  }
+                </select>
+              </label>
+              <label><span>TYPE</span>
+                <select [value]="report.type" (change)="updateDraftReport(report.id,'type',$any($event.target).value)">
+                  <option value="bearing">Bearing °</option>
+                  <option value="range">Range km</option>
+                  <option value="sector">Compass</option>
+                </select>
+              </label>
+              <label><span>VALUE</span>
+                @if(report.type==='sector'){
+                  <select [value]="report.value"
+                    (change)="updateDraftReport(report.id,'value',$any($event.target).value)">
+                    @for(dir of compassOptions;track dir){<option [value]="dir">{{dir}}</option>}
+                  </select>
+                }@else{
+                  <input type="text" inputmode="decimal" [value]="report.value"
+                    (input)="updateDraftReport(report.id,'value',$any($event.target).value)"
+                    [placeholder]="report.type==='range'?'5.73':'051'">
+                }
+              </label>
+              <button class="remove-intel" type="button" (click)="removeDraftReport(report.id)"
+                aria-label="Remove report">×</button>
+            </div>
+          }@empty{<p class="plot-inline-note">Add observations from Iron Nest, spotters or existing resolved references.</p>}
+          @if(draftSolved();as preview){
+            <div class="plot-draft-result">
+              <span>{{preview.message}}</span>
+              @if(preview.position){<strong>{{formatGrid(preview.position)}}</strong>}
+              @if(preview.candidates.length>1){
+                <div class="candidate-list">
+                  @for(point of preview.candidates;track $index){
+                    <button type="button" [class.chosen]="draftCandidate()===$index"
+                      (click)="draftCandidate.set($index)">
+                      {{formatGrid(point)}} · {{draftCandidate()===$index?'SELECTED':'CHOOSE'}}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if(draftRole()==='target'&&!draftPosition()){
+            <p class="plot-inline-note">A target needs a uniquely resolved location (usually two independent reports) before a firing solution can be created.</p>
+          }
+        </section>
+      }
+      @if(draftRole()==='target'){
+        <div class="target-loadout" aria-label="Firing solution equipment">
+          <label><span>SHELL TYPE</span>
+            <select [value]="draftShell()" (change)="draftShell.set($any($event.target).value)">
+              @for(shell of shellOptions;track shell){<option [value]="shell">{{shell}}</option>}
+            </select>
+          </label>
+          <label><span>CANNON</span>
+            <select [value]="draftCannon()" (change)="draftCannon.set($any($event.target).value)">
+              <option value="left">Left cannon</option>
+              <option value="right">Right cannon</option>
+            </select>
+          </label>
+        </div>
+      }
+      @if(draftError()){<p class="plot-draft-error" role="alert">{{draftError()}}</p>}
+    </div>
+    <footer class="plot-add-footer">
+      <button type="button" class="secondary-action" (click)="closeModal()">Cancel</button>
+      <button type="button" class="primary-action" [disabled]="!canAddDraft()"
+        (click)="addReference()">ADD {{draftRole()==='spotter'?'SPOTTER':draftRole()==='target'?'TARGET':'REFERENCE'}}</button>
+    </footer>
+  </section>
+</div>
 }
 
 @if(modal()==='node'){

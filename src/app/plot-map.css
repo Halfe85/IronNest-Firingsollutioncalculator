@@ -7,3 +7,12 @@
 .observation-line{stroke:#f4c17b;stroke-width:2;stroke-dasharray:7 4}
 .observation-sector{fill:#f4bf7b;fill-opacity:.10;stroke:#c59c63;stroke-width:1}
 :host{display:block;min-width:0;max-width:100%}
+
+/* The plotter now fills the entire available application viewport. */
+:host{height:100%;width:100%;min-height:0;min-width:0;display:block}
+.map-viewport{height:100%;min-height:0;box-sizing:border-box;border-radius:0}
+.plot-svg{height:100%;min-height:100%;min-width:960px;width:100%;box-sizing:border-box}
+.map-point{cursor:pointer}
+.map-point:focus-visible{outline:none}
+.map-point:focus-visible circle{stroke:#ffffff;stroke-width:4}
+.map-point:hover circle{stroke:#f8e6b6;stroke-width:3}

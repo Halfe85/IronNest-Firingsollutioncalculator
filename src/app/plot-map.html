@@ -26,6 +26,11 @@
         }
       }
       @for(marker of markers;track marker.id){
+        <g class="map-point"
+          role="button" tabindex="0" [attr.aria-label]="'Edit '+marker.name"
+          (click)="selectMarker(marker.id)"
+          (keydown.enter)="selectMarker(marker.id)"
+          (keydown.space)="$event.preventDefault();selectMarker(marker.id)">
         <circle [attr.cx]="x(marker.p.x)" [attr.cy]="y(marker.p.y)"
           [attr.r]="marker.id===highlightId?13:9"
           [attr.fill]="marker.role==='nest'?'#efbc75':marker.role==='spotter'?'#8bbee1':marker.role==='reference'?'#e2ce97':'#f18a75'"
@@ -33,6 +38,7 @@
         <text class="map-marker-text" [attr.x]="x(marker.p.x)+12" [attr.y]="y(marker.p.y)-9">
           {{marker.name}} ({{marker.grid}})
         </text>
+        </g>
       }
     </g>
   </svg>
