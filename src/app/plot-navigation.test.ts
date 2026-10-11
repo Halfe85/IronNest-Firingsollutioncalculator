@@ -21,7 +21,8 @@ test('phone opens zoomed in and remains independently pannable',()=>{
   assert.equal(moved.zoom,camera.zoom);
 });
 test('pinch zoom keeps the point under fingers stationary in SVG coordinates',()=>{
-  const size={width:400,height:620},before={x:520,y:265,zoom:2};
+  // Zoom far enough in that the map edge clamp is not active.
+  const size={width:400,height:620},before={x:520,y:260,zoom:4};
   const pivot={x:128,y:177};
   const v1=viewFor(before,size);
   const wx=v1.x+pivot.x*v1.width/size.width;

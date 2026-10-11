@@ -107,7 +107,8 @@ export class PlotMapComponent implements AfterViewInit, OnDestroy {
   }
   onPointerDown(event:PointerEvent):void{
     if(!this.navigation || (event.pointerType==='mouse'&&event.button!==0))return;
-    event.preventDefault();
+    // touch-action:none handles page scrolling; preserving native click
+    // lets taps on map markers open their details.
     this.pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
     if(this.pointers.size===1)this.movedSinceDown=false;
     // Do not capture before movement: a simple tap must reach its marker.
