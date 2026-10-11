@@ -72,3 +72,51 @@ export function compareFlightSample(s: FlightFieldSample): FlightComparison | nu
     reportedVsModelElevationDeg:s.reportedElevationDeg-modelElevationDeg
   };
 }
+
+/**
+ * Additional player-reported 2026-10-11 flight durations.
+ *
+ * Unlike F01–F03, no measured distance, shell, fire-clock or impact-clock
+ * timestamps were supplied. Distance below is DERIVED from the fan elevation
+ * model (degrees × charges / 12), not a separately observed range.
+ * The reported flight duration may be a game display or a timed observation.
+ */
+export interface ElevationFlightSample {
+  id:string;
+  bearingDeg:number;
+  reportedElevationDeg:number;
+  charges:number;
+  reportedFlightSeconds:number;
+  shell:null;
+  rangeSource:'derived-from-elevation';
+}
+export const ELEVATION_FLIGHT_SAMPLES:readonly ElevationFlightSample[]=[
+  {
+    id:'E01',bearingDeg:66.2,reportedElevationDeg:52.12,charges:3,
+    reportedFlightSeconds:34,shell:null,rangeSource:'derived-from-elevation'
+  },
+  {
+    id:'E02',bearingDeg:68.2,reportedElevationDeg:51.70,charges:3,
+    reportedFlightSeconds:33.9,shell:null,rangeSource:'derived-from-elevation'
+  },
+  {
+    id:'E03',bearingDeg:1.0,reportedElevationDeg:53.08,charges:1,
+    reportedFlightSeconds:21,shell:null,rangeSource:'derived-from-elevation'
+  }
+];
+export function compareElevationFlightSample(sample:ElevationFlightSample):{
+  inferredRangeKm:number;
+  modeledFlightSeconds:number;
+  differenceSeconds:number;
+}|null {
+  // Use the existing community rule without changing the firing model.
+  if(!Number.isInteger(sample.charges)||sample.charges<1||sample.charges>6||
+     !Number.isFinite(sample.reportedElevationDeg)||
+     sample.reportedElevationDeg<=0||sample.reportedElevationDeg>60)return null;
+  const inferredRangeKm=sample.reportedElevationDeg*sample.charges/12;
+  const modeledFlightSeconds=estimatedFlightSeconds(inferredRangeKm,sample.charges);
+  return modeledFlightSeconds===null?null:{
+    inferredRangeKm,modeledFlightSeconds,
+    differenceSeconds:modeledFlightSeconds-sample.reportedFlightSeconds
+  };
+}

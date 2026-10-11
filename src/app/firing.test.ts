@@ -139,3 +139,22 @@ test('registered flight-time field samples preserve both clock and shot observat
   assert.ok(Math.abs(comparisons[2].modelVsDisplayedSeconds+0.1983)<0.002);
   // An apparent firing delay in F03 is NOT assumed to be a universal constant.
 });
+
+test('2026-10-11 player flight reports agree with existing model within 0.12 seconds',async()=>{
+  const {
+    ELEVATION_FLIGHT_SAMPLES,compareElevationFlightSample
+  }=await import('./flight-field-data.ts');
+  assert.deepEqual(ELEVATION_FLIGHT_SAMPLES.map(s=>s.bearingDeg),[66.2,68.2,1.0]);
+  assert.deepEqual(ELEVATION_FLIGHT_SAMPLES.map(s=>s.reportedElevationDeg),[52.12,51.70,53.08]);
+  assert.deepEqual(ELEVATION_FLIGHT_SAMPLES.map(s=>s.charges),[3,3,1]);
+  assert.deepEqual(ELEVATION_FLIGHT_SAMPLES.map(s=>s.reportedFlightSeconds),[34,33.9,21]);
+  const results=ELEVATION_FLIGHT_SAMPLES.map(s=>compareElevationFlightSample(s)!);
+  assert.deepEqual(results.map(r=>Number(r.inferredRangeKm.toFixed(3))),[13.03,12.925,4.423]);
+  for(const result of results){
+    assert.ok(Math.abs(result.differenceSeconds)<0.12,
+      'reported flight must match current estimate within 0.12s');
+  }
+  assert.equal(ELEVATION_FLIGHT_SAMPLES.every(s=>s.shell===null),true);
+  assert.equal(ELEVATION_FLIGHT_SAMPLES.every(s=>s.rangeSource==='derived-from-elevation'),true);
+  assert.equal(compareElevationFlightSample({...ELEVATION_FLIGHT_SAMPLES[0],reportedElevationDeg:65}),null);
+});
