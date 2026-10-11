@@ -171,3 +171,88 @@
  .plot-add-scroll .intel-line .remove-intel{grid-column:3;grid-row:1/3;height:100%}
 }
 @media(prefers-reduced-motion:reduce){.plot-method-row button,.plot-map-actions button{transition:none}}
+
+
+/* Mobile tactical plotting: map gets the screen; controls and editors fit
+   within the safe-area and remain reachable with the software keyboard. */
+@media(max-width:700px){
+ .plot-map-toolbar{
+   display:grid;grid-template-columns:minmax(0,1fr);gap:5px;
+   padding:7px max(8px,env(safe-area-inset-right)) 7px max(8px,env(safe-area-inset-left));
+   min-height:0
+ }
+ .plot-toolbar-left{width:100%;display:flex;align-items:center;gap:7px;justify-content:space-between}
+ .plot-mode-inline{flex:0 1 145px;min-width:0}
+ .plot-mode-inline select{max-width:100%;width:100%;font-size:10px;min-height:39px}
+ .plot-nest-indicator{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:10px}
+ .plot-map-actions{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);width:100%;gap:7px}
+ .plot-map-actions button{min-width:0;min-height:44px;font-size:11px;padding:6px 8px}
+ .plot-map-actions .filter-button{overflow:hidden;text-overflow:ellipsis}
+ .plot-filter-panel{
+   z-index:50;left:6px;right:6px;top:auto;bottom:7px;
+   box-sizing:border-box;width:auto;max-height:min(64dvh,490px);
+   border-radius:12px;padding:10px;gap:7px;
+   box-shadow:0 -10px 32px #000d
+ }
+ .plot-filter-head{flex-wrap:wrap;gap:6px}
+ .plot-filter-head>div{flex:1;justify-content:flex-end}
+ .plot-filter-head button,.plot-new-mission{min-height:42px}
+ .plot-report-filter{min-height:45px;font-size:12px}
+ .plot-report-filter input{width:22px;height:22px}
+ .plot-overlay{
+   align-items:flex-end;justify-content:stretch;
+   padding:0;overflow:hidden
+ }
+ .plot-dialog.plot-add-dialog{
+   width:100%;max-width:100%;margin:0;
+   height:min(95dvh,900px);
+   max-height:calc(100dvh - env(safe-area-inset-top));
+   padding:12px 12px calc(8px + env(safe-area-inset-bottom));
+   border-radius:18px 18px 0 0;
+   border-left:0;border-right:0;border-bottom:0
+ }
+ .plot-add-dialog .dialog-heading{
+   margin-bottom:6px;padding:5px 2px 9px;
+   border-bottom:1px solid #435949;top:0
+ }
+ .plot-add-scroll{overscroll-behavior:contain;scrollbar-width:thin}
+ .plot-add-scroll .field-label input,.plot-add-scroll .field-label select,
+ .plot-add-scroll .intel-line input,.plot-add-scroll .intel-line select{font-size:16px;min-height:46px}
+ .plot-required-nest,.plot-add-coordinates,.plot-add-reports{padding:9px;margin:5px 0 9px}
+ .plot-method-row button{min-height:48px}
+ .plot-add-footer{
+   padding-top:10px;margin-top:4px;
+   padding-bottom:env(safe-area-inset-bottom);
+   background:#1b2720
+ }
+ .plot-add-footer button{min-height:49px;flex:1}
+ .plot-add-footer .primary-action{flex:1.5}
+ .plot-dialog.point-dialog{
+   max-height:calc(94dvh - env(safe-area-inset-top));
+   border-radius:16px 16px 0 0;
+   width:100%;max-width:100%;padding:12px;
+   margin:0;border-left:0;border-right:0;border-bottom:0
+ }
+ .point-dialog .dialog-actions{
+   position:sticky;bottom:-12px;z-index:8;
+   margin:12px -12px -12px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+   background:#1b2720;border-top:1px solid #445947
+ }
+ .point-dialog .dialog-actions button{min-height:46px}
+ .grid-picks{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .grid-picks select{min-height:48px;font-size:16px}
+ .plot-waypoint-body{min-width:0}
+}
+@media(max-width:380px){
+ .plot-map-actions button{font-size:10px}
+ .plot-toolbar-left .plot-nest-indicator{font-size:9px}
+ .plot-filter-panel{max-height:68dvh}
+ .plot-add-dialog .target-loadout{gap:7px;padding:7px}
+}
+@media(max-height:500px) and (orientation:landscape){
+ .plot-map-toolbar{display:flex;min-height:49px;gap:7px}
+ .plot-map-actions{display:flex;width:auto}
+ .plot-map-actions button{min-height:42px}
+ .plot-nest-indicator{display:none}
+ .plot-dialog.plot-add-dialog{height:100dvh;border-radius:0}
+}

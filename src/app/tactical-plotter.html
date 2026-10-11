@@ -46,7 +46,7 @@
     }
     <div class="plot-main-map" aria-label="Full-screen observation map">
       <app-plot-map [markers]="mapMarkers()" [observations]="visibleObservations()"
-        (markerSelect)="openNode($event)"></app-plot-map>
+        [navigation]="true" (markerSelect)="openNode($event)"></app-plot-map>
     </div>
     @if(status()){<div class="plot-bottom-status" role="status">{{status()}}</div>}
   }@else{
