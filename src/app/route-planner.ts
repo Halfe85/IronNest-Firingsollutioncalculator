@@ -70,7 +70,10 @@ export class RoutePlannerComponent {
     const result=[{id:'arrival',name:'Arrival reference'}];
     for(const source of this.originsState())
       result.push({id:'ref:'+source.id,name:source.name});
-    const currentIndex=route.stops.findIndex(s=>s.id===this.stopDraft()?.id);
+    const foundIndex=route.stops.findIndex(s=>s.id===this.stopDraft()?.id);
+    // A new waypoint is inserted immediately before arrival: earlier stops
+    // must already be available as origins in its editor.
+    const currentIndex=foundIndex<0?route.stops.length-1:foundIndex;
     for(let i=0;i<currentIndex;i++){
       const point=this.geometry()?.points[i];
       if(point)result.push({id:route.stops[i].id??'',name:route.stops[i].name});
