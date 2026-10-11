@@ -100,11 +100,18 @@ export class TacticalPlotterComponent{
     const nest=this.draftNest()??this.nest()?.grid;
     if(!nest||!gridInputToPoint(nest))return false;
     if(this.draftRole()==='reference'&&!this.draftName().trim())return false;
-    if(this.draftRole()==='spotter'||this.draftMethod()==='coordinates')
-      return !!this.draftPosition();
-    if(!this.draftReportsValid())return false;
-    if(this.draftRole()==='target')return !!this.draftPosition();
-    return true;
+    if(this.draftRole()==='spotter')return !!this.draftPosition();
+    if(this.draftMethod()==='reports'&&!this.draftReportsValid())return false;
+    const position=this.draftPosition();
+    if(this.draftRole()==='target'){
+      const nestPoint=gridInputToPoint(nest);
+      if(!nestPoint||!position)return false;
+      const firing=firingFromPlot(nestPoint,position);
+      return firing.rangeKm>0&&firing.rangeKm<=30&&!!firing.grid;
+    }
+    // A reference may start with a partial report; it stays unresolved on
+    // the map until enough independent observations are entered.
+    return this.draftMethod()==='reports'||!!position;
   });
   readonly originOptions=computed(()=>this.nodes().filter(n=>n.id!==this.activeId()));
   readonly mapMarkers=computed(()=>this.solution().results.flatMap(result=>{
