@@ -5,7 +5,7 @@ import {TrainTrackerComponent,type MovingFireRequest} from './train-tracker';
 import {PlotMapComponent,type MapObservationMarker} from './plot-map';
 import {
   gridInputLabel, solvePlotGraph, firingFromPlot, updateIntelReport,
-  gridInputToPoint, EMPTY_GRID, type GridInput, type IntelNode, type IntelReport, type NodeRole
+  gridInputToPoint, gridInputFromText, EMPTY_GRID, type GridInput, type IntelNode, type IntelReport, type NodeRole
 } from './graph-math';
 import {GridSelectComponent} from './grid-select';
 import {SHELLS} from './firing';
@@ -14,6 +14,7 @@ import {sessionDb} from './session-db';
 import {groupMapPoints} from './plot-lists';
 import {RoutePlannerComponent} from './route-planner';
 import {type TacticalRouteOrigin,type TacticalRouteOverlay} from './tactical-routes';
+import {type RouteTargetRequest} from './route-planner';
 
 export interface PlotFireRequest {label:string; bearing:number;distanceKm:number;grid:string; nestGrid:string; shell:string; cannon:Cannon; stayOnPlot?:boolean;}
 function clone(src:readonly IntelNode[]):IntelNode[]{
@@ -42,6 +43,36 @@ export class TacticalPlotterComponent{
   readonly routeSegments=computed(()=>this.showRoutes()?this.displayedRoutes().segments:[]);
   updateRouteOverlay(overlay:TacticalRouteOverlay):void{this.displayedRoutes.set(overlay);}
   openRouteMarker(id:string):void{this.routePlanner()?.openFromMap(id);}
+  openListedRoute(id:string):void{
+    this.closeList();
+    this.filterOpen.set(false);
+    this.routePlanner()?.selectRoute(id);
+  }
+  createTargetFromRoute(request:RouteTargetRequest):void{
+    const route=this.routePlanner()?.routes().find(r=>r.id===request.routeId);
+    const grid=gridInputFromText(request.grid),nestGrid=this.nestGridText();
+    if(!route||!grid||!nestGrid||request.nestGrid!==nestGrid||
+      !Number.isFinite(request.distanceKm)||
+      request.distanceKm<=0||request.distanceKm>30)return;
+    const count=this.nodes().filter(n=>n.role==='target').length+1;
+    const title='Target #'+String(count).padStart(2,'0')+' - '+request.targetLabel;
+    const id='target-'+uid();
+    this.nodes.update(nodes=>[...nodes,{
+      id,name:title,role:'target',grid,reports:[],
+      sourceRouteId:request.routeId,routeImpactClock:request.impactClock,
+      sourceRouteName:request.routeName
+    }]);
+    this.targetLoadouts.update(loadouts=>({...loadouts,
+      [id]:{shell:request.shell,cannon:request.cannon}
+    }));
+    this.fireSolution.emit({
+      label:title,bearing:request.bearing,distanceKm:request.distanceKm,
+      grid:request.grid,nestGrid,shell:request.shell,cannon:request.cannon,
+      stayOnPlot:true
+    });
+    this.status.set(title+' saved from route '+request.routeName+
+      ' at '+request.impactClock+'.');
+  }
   @Output() fireSolution=new EventEmitter<PlotFireRequest>();
   @Output() clearFiringSolutions=new EventEmitter<void>();
   readonly hydrated=signal(false);
@@ -56,7 +87,8 @@ export class TacticalPlotterComponent{
   readonly plotLists=computed(()=>groupMapPoints(this.nodes()));
   readonly referenceList=computed(()=>this.plotLists().references);
   readonly targetList=computed(()=>this.plotLists().targets);
-  readonly referenceCount=computed(()=>this.referenceList().length);
+  readonly referenceCount=computed(()=>
+    this.referenceList().length+(this.routePlanner()?.routes().length??0));
   readonly targetCount=computed(()=>this.targetList().length);
   readonly selectedList=computed(()=>
     this.listOpen()==='references'?this.referenceList():this.targetList());
@@ -318,7 +350,7 @@ export class TacticalPlotterComponent{
     this.addStep.set(this.nestConfirmed()?'menu':'nest');
     this.modal.set('add');
   }
-  openAddWindow(step:'nest'|'spotter'|'reference'|'target'|'waypoint'):void{
+  openAddWindow(step:'nest'|'spotter'|'reference'|'target'|'route'):void{
     // No route can bypass the required Iron Nest coordinates.
     if(step!=='nest'&&!this.nestConfirmed()){
       this.draftNest.set(null);
@@ -326,9 +358,9 @@ export class TacticalPlotterComponent{
       return;
     }
     this.draftError.set('');
-    if(step==='waypoint'){
+    if(step==='route'){
       this.modal.set(null);
-      this.routePlanner()?.openSelection();
+      this.routePlanner()?.newRoute();
       return;
     }
     if(step==='nest'){

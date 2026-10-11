@@ -411,3 +411,10 @@
 @media(max-width:420px){
   .plot-choice-waypoint{grid-column:auto;min-height:67px}
 }
+
+/* Each saved moving-target route is one gold Reference-list entry. */
+.plot-list-route{
+  border-color:#68815e;background:#1d3024
+}
+.plot-list-route .plot-list-point-icon{color:#a9d6a1;font-size:25px}
+.plot-list-route:hover{border-color:#d6c28f;background:#293d2d}

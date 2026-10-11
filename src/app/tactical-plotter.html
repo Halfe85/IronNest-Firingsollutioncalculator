@@ -51,7 +51,8 @@
 </div>
 
 <app-route-planner [origins]="routeOrigins()" [nestGrid]="nestGridText()"
-  (overlayChange)="updateRouteOverlay($event)"></app-route-planner>
+  (overlayChange)="updateRouteOverlay($event)"
+  (createTarget)="createTargetFromRoute($event)"></app-route-planner>
 
 @if(listOpen();as kind){
   <div class="plot-list-overlay" role="presentation" (click)="closeList()">
@@ -60,7 +61,7 @@
       <header class="plot-list-heading">
         <div>
           <span class="micro-label">TACTICAL MAP · SAVED POINTS</span>
-          <h2 id="plot-list-heading">{{kind==='references'?'References & Spotters':'Targets'}}
+          <h2 id="plot-list-heading">{{kind==='references'?'References, Spotters & Routes':'Targets'}}
             <span class="plot-list-total">{{kind==='references'?referenceCount():targetCount()}}</span>
           </h2>
         </div>
@@ -83,15 +84,31 @@
             </span>
             <span class="plot-list-entry-arrow" aria-hidden="true">›</span>
           </button>
-        }@empty{
+        }
+        @if(kind==='references'){
+          @for(route of routePlanner()?.routes()??[];track route.id){
+            <button type="button" class="plot-list-entry plot-list-route"
+              (click)="openListedRoute(route.id)"
+              [attr.aria-label]="'Edit route '+route.name">
+              <span class="plot-list-point-icon" aria-hidden="true">⌁</span>
+              <span class="plot-list-entry-details">
+                <strong>{{route.name}}</strong>
+                <small>ROUTE · {{route.stops.length}} waypoints · Tap to edit</small>
+              </span>
+              <span class="plot-list-entry-arrow" aria-hidden="true">›</span>
+            </button>
+          }
+        }
+        @if(kind==='targets'&&!targetList().length ||
+          kind==='references'&&!referenceCount()){
           <div class="plot-list-empty">
-            <strong>{{kind==='references'?'No references or spotters yet.':'No targets yet.'}}</strong>
+            <strong>{{kind==='references'?'No references, spotters or routes yet.':'No targets yet.'}}</strong>
             <p>Use Add Reference on the tactical map to create one.</p>
           </div>
         }
       </div>
       <div class="plot-list-foot">
-        <span>{{selectedList().length}} {{kind==='references'?'references & spotters':'targets'}}</span>
+        <span>{{kind==='references'?referenceCount():targetCount()}} {{kind==='references'?'references, spotters & routes':'targets'}}</span>
         <button type="button" (click)="closeList()">Done</button>
       </div>
     </section>
@@ -126,9 +143,9 @@
           <span><strong>TARGET</strong><small>Creates a firing solution when located</small></span>
         </button>
         <button type="button" class="plot-choice-item plot-choice-waypoint"
-          (click)="openAddWindow('waypoint')">
+          (click)="openAddWindow('route')">
           <span class="plot-choice-icon">⌁</span>
-          <span><strong>ADD WAYPOINT</strong><small>Create or edit a moving-target route</small></span>
+          <span><strong>ADD ROUTE</strong><small>Create a new moving-target route</small></span>
         </button>
       </div>
     </section>

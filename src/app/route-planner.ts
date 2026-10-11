@@ -4,13 +4,27 @@ import {GridSelectComponent} from './grid-select';
 import {EMPTY_GRID,gridInputFromText,gridInputLabel,type GridInput} from './graph-math';
 import {formatGrid,parseGrid} from './map-math';
 import {clockSeconds,type TrainStop} from './train-math';
+import {SHELLS,calculateFireTime,elevationAt,estimatedFlightSeconds} from './firing';
+import {type Cannon} from './shot-options';
 import {fillWaypointTimes} from './route-timing';
 import {sessionDb} from './session-db';
 import {
-  importLegacyRoutes,resolvedArrival,routeGeometry,routeOverlay,validTacticalRoute,
+  importLegacyRoutes,predictRouteAt,resolvedArrival,routeGeometry,routeOverlay,validTacticalRoute,
   type TacticalRoute,type TacticalRouteOrigin,type TacticalRouteOverlay
 } from './tactical-routes';
 
+export interface RouteTargetRequest {
+  routeId:string;
+  routeName:string;
+  targetLabel:string;
+  impactClock:string;
+  grid:string;
+  bearing:number;
+  distanceKm:number;
+  nestGrid:string;
+  shell:string;
+  cannon:Cannon;
+}
 function createId():string{
   return typeof crypto!=='undefined'&&'randomUUID' in crypto?
     crypto.randomUUID():'route-'+Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -28,16 +42,64 @@ export class RoutePlannerComponent {
   }
   @Input() set nestGrid(value:string|null){this.nestState.set(value??'');}
   @Output() overlayChange=new EventEmitter<TacticalRouteOverlay>();
+  @Output() createTarget=new EventEmitter<RouteTargetRequest>();
 
   readonly emptyGrid=EMPTY_GRID;
   readonly gridInputFromText=gridInputFromText;
   readonly hydrated=signal(false);
   readonly routes=signal<TacticalRoute[]>([]);
-  readonly screen=signal<'select'|'config'|'waypoints'|'editor'|null>(null);
+  readonly screen=signal<'select'|'config'|'waypoints'|'editor'|'prediction'|null>(null);
   readonly selectedId=signal<string|null>(null);
   readonly routeDraft=signal<TacticalRoute|null>(null);
   readonly stopDraft=signal<TrainStop|null>(null);
   readonly error=signal('');
+  readonly shellOptions=SHELLS;
+  readonly impactMode=signal('custom');
+  readonly customImpactClock=signal('');
+  readonly predictionShell=signal('HCHE');
+  readonly predictionCannon=signal<Cannon>('left');
+  readonly measuredFlight=signal('');
+  readonly impactClock=computed(()=>{
+    const mode=this.impactMode(),route=this.currentRoute();
+    return mode==='custom'?this.customImpactClock():
+      route?.stops[Number(mode)]?.time??'';
+  });
+  readonly prediction=computed(()=>{
+    const route=this.currentRoute();
+    return route?predictRouteAt(route,this.originsState(),
+      this.nestState(),this.impactClock()):null;
+  });
+  readonly predictionCharge=computed(()=>{
+    const result=this.prediction();
+    if(!result?.ok || !result.result.grid)return null;
+    const charge=Math.ceil(result.result.rangeKm/5);
+    return charge>=1&&charge<=6&&
+      elevationAt(result.result.rangeKm,charge)!==null?charge:null;
+  });
+  readonly predictionElevation=computed(()=>{
+    const charge=this.predictionCharge(),prediction=this.prediction();
+    return charge!==null&&prediction?.ok?
+      elevationAt(prediction.result.rangeKm,charge):null;
+  });
+  readonly projectileFlight=computed(()=>{
+    const charge=this.predictionCharge();
+    const result=this.prediction();
+    if(!result?.ok||charge===null)return null;
+    if(this.measuredFlight().trim()){
+      const secs=Number(this.measuredFlight().trim().replace(',','.'));
+      return Number.isFinite(secs)&&secs>=0&&secs<=3600?secs:null;
+    }
+    return estimatedFlightSeconds(result.result.rangeKm,charge);
+  });
+  readonly predictedFireTime=computed(()=>{
+    const secs=this.projectileFlight();
+    return secs===null?null:calculateFireTime(this.impactClock(),secs);
+  });
+  readonly canCreateRouteTarget=computed(()=>{
+    const p=this.prediction();
+    return !!p?.ok&&!!p.result.grid&&this.predictionCharge()!==null&&
+      !!this.predictedFireTime();
+  });
   readonly currentRoute=computed(()=>this.routes().find(r=>r.id===this.selectedId())??null);
   readonly geometry=computed(()=>{
     const route=this.currentRoute();
@@ -105,6 +167,40 @@ export class RoutePlannerComponent {
     if(this.hydrated())void sessionDb.write('routes',this.routes());
   }
   openSelection():void{this.error.set('');this.screen.set('select');}
+  openPrediction():void{
+    const route=this.currentRoute();
+    if(!route)return;
+    const firstKnown=route.stops.findIndex(stop=>clockSeconds(stop.time)!==null);
+    this.impactMode.set(firstKnown>=0?String(firstKnown):'custom');
+    this.customImpactClock.set('');
+    this.measuredFlight.set('');
+    this.predictionShell.set('HCHE');
+    this.predictionCannon.set('left');
+    this.error.set('');
+    this.screen.set('prediction');
+  }
+  setPredictionCannon(value:string):void{
+    if(value==='left'||value==='right')this.predictionCannon.set(value);
+  }
+  confirmRouteTarget():void{
+    const route=this.currentRoute(),prediction=this.prediction();
+    const grid=prediction?.ok?prediction.result.grid:null;
+    if(!route||!prediction?.ok||!grid||!this.canCreateRouteTarget()){
+      this.error.set(prediction&&!prediction.ok?prediction.error:
+        'Check the route times, target position and projectile flight time.');
+      return;
+    }
+    this.createTarget.emit({
+      routeId:route.id,routeName:route.name,
+      targetLabel:route.targetLabel.trim()||'Moving target',
+      impactClock:this.impactClock(),grid,
+      bearing:prediction.result.bearingFromNest,
+      distanceKm:prediction.result.rangeKm,
+      nestGrid:this.nestState(),shell:this.predictionShell(),
+      cannon:this.predictionCannon()
+    });
+    this.close();
+  }
   close():void{
     this.error.set('');
     this.routeDraft.set(null);this.stopDraft.set(null);
@@ -112,7 +208,7 @@ export class RoutePlannerComponent {
   }
   back():void{
     this.error.set('');
-    if(this.screen()==='editor')this.screen.set('waypoints');
+    if(this.screen()==='editor'||this.screen()==='prediction')this.screen.set('waypoints');
     else if(this.screen()==='waypoints')this.screen.set('select');
     else if(this.screen()==='config'){
       this.routeDraft.set(null);
@@ -120,6 +216,7 @@ export class RoutePlannerComponent {
     }else this.close();
   }
   newRoute():void{
+    this.error.set('');
     if(this.routes().length>=25){this.error.set('Maximum 25 routes.');return;}
     const route:TacticalRoute={
       id:createId(),name:'New route',

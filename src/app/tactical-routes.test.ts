@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {routeOverlay,routeGeometry,importLegacyRoutes,type TacticalRoute} from './tactical-routes.ts';
+import {routeOverlay,routeGeometry,importLegacyRoutes,predictRouteAt,type TacticalRoute} from './tactical-routes.ts';
 
 const route:TacticalRoute={
   id:'route-1',name:'High Tide',stationGrid:'',stationReferenceId:'ref-1',
@@ -36,4 +36,17 @@ test('legacy waypoint imports retain individual stops and saved route references
   assert.equal(imported[0].references?.[0]?.id,'rail');
   assert.equal(imported[0].stops[0].id,'first');
   assert.deepEqual(importLegacyRoutes(null),[]);
+});
+
+test('predicted moving target uses saved route timing and rejects extrapolation',()=>{
+  const origins=[{id:'ref-1',name:'Station',grid:'J5 0:0'}];
+  const atTime=predictRouteAt(route,origins,'A1 0:0','11:02:30');
+  assert.equal(atTime.ok,true);
+  if(atTime.ok){
+    assert.ok(atTime.result.grid);
+    assert.ok(atTime.result.rangeKm>0);
+  }
+  assert.equal(predictRouteAt(route,origins,'A1 0:0','11:07:30').ok,false);
+  assert.equal(predictRouteAt(route,[],'A1 0:0','11:02:30').ok,false);
+  assert.equal(predictRouteAt(route,origins,'','11:02:30').ok,false);
 });

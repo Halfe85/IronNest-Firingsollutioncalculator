@@ -71,7 +71,7 @@ test('bottom bar counters open dedicated map lists with spotters grouped as refe
   assert.match(app,/tactical\.openList\('references'\)/);
   assert.match(app,/tactical\.openList\('targets'\)/);
   assert.match(plot,/\(click\)="openNode\(point\.id\)"/);
-  assert.match(plot,/References & Spotters/);
+  assert.match(plot,/References, Spotters & Routes/);
   assert.match(plot,/No targets yet/);
   assert.match(plotTs,/groupMapPoints\(this\.nodes\(\)\)/);
   assert.match(appCss,/\.plot-footer-targets\{/);
@@ -82,16 +82,39 @@ test('the fifth Add Reference option opens independent waypoint-route windows',(
   const html=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
   const ts=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
   const child=readFileSync(new URL('./route-planner.html',import.meta.url),'utf8');
-  assert.match(html,/openAddWindow\('waypoint'\)/);
+  assert.match(html,/openAddWindow\('route'\)/);
   assert.match(html,/\[routeSegments\]="routeSegments\(\)"/);
   assert.match(html,/\[routeMarkers\]="routeMarkers\(\)"/);
   assert.match(html,/routeMarkerSelect/);
   assert.match(html,/Waypoint routes and markers/);
-  assert.match(ts,/this\.routePlanner\(\)\?\.openSelection\(\)/);
+  assert.match(ts,/this\.routePlanner\(\)\?\.newRoute\(\)/);
   assert.match(ts,/this\.routePlanner\(\)\?\.clearRoutes\(\)/);
-  for(const name of ['select','config','waypoints','editor']){
+  for(const name of ['select','config','waypoints','editor','prediction']){
     assert.ok(child.includes("screen()==='"+name+"'"),name);
   }
   assert.match(child,/SAVE WAYPOINT/);
   assert.match(child,/CALCULATE MISSING TIMES/);
+});
+
+test('saved routes contribute exactly one to the reference counter and open waypoint editing',()=>{
+  const ts=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
+  const html=readFileSync(new URL('./tactical-plotter.html',import.meta.url),'utf8');
+  assert.match(ts,/this\.referenceList\(\)\.length\+\(this\.routePlanner\(\)\?\.routes\(\)\.length\?\?0\)/);
+  assert.match(html,/openListedRoute\(route\.id\)/);
+  assert.match(html,/\{\{route\.stops\.length\}\} waypoints/);
+  assert.match(html,/ADD ROUTE/);
+  assert.doesNotMatch(html,/ADD WAYPOINT<\/strong>/);
+});
+test('route-based target prediction is confirmed in a separate window',()=>{
+  const ts=readFileSync(new URL('./route-planner.ts',import.meta.url),'utf8');
+  const html=readFileSync(new URL('./route-planner.html',import.meta.url),'utf8');
+  const parent=readFileSync(new URL('./tactical-plotter.ts',import.meta.url),'utf8');
+  assert.match(ts,/predictRouteAt\(route,this\.originsState\(\)/);
+  assert.match(ts,/this\.createTarget\.emit\(\{/);
+  assert.match(html,/Target Prediction/);
+  assert.match(html,/\(click\)="confirmRouteTarget\(\)"/);
+  assert.match(html,/\[disabled\]="!canCreateRouteTarget\(\)"/);
+  assert.match(parent,/createTargetFromRoute\(request:RouteTargetRequest\)/);
+  assert.match(parent,/sourceRouteId:request\.routeId/);
+  assert.match(parent,/this\.fireSolution\.emit/);
 });

@@ -3,14 +3,16 @@
   <section class="route-planner-window" role="dialog" aria-modal="true"
     [attr.aria-label]="screen()==='select'?'Select waypoint route':
       screen()==='config'?'Route configuration':
-      screen()==='waypoints'?'Route waypoint list':'Edit waypoint'"
+      screen()==='waypoints'?'Route waypoint list':
+      screen()==='prediction'?'Target prediction':'Edit waypoint'"
     (click)="$event.stopPropagation()">
     <header class="route-window-head">
       <div>
         <span class="route-eyebrow">TACTICAL MAP · MOVING TARGETS</span>
         <h2>{{screen()==='select'?'Waypoint Routes':
           screen()==='config'?'Route Configuration':
-          screen()==='waypoints'?'Waypoints':'Waypoint Editor'}}</h2>
+          screen()==='waypoints'?'Waypoints':
+          screen()==='prediction'?'Target Prediction':'Waypoint Editor'}}</h2>
       </div>
       <button class="route-close" type="button" (click)="close()"
         aria-label="Close waypoint windows">×</button>
@@ -18,7 +20,7 @@
     @if(screen()==='select'){
       <div class="route-scroll">
         <p class="route-help">Each named moving-target route owns its waypoints.
-          Routes and markers appear on the tactical map, but do not count as references.</p>
+          Routes and markers appear on the tactical map. Each saved route counts once in the Reference list.</p>
         <div class="route-list">
           @for(route of routes();track route.id){
             <button type="button" class="route-list-row" (click)="selectRoute(route.id)">
@@ -138,11 +140,88 @@
           @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
         }
       </div>
-      <footer class="route-window-foot">
+      <footer class="route-window-foot route-three-actions">
         <button type="button" class="route-secondary" (click)="back()">Routes</button>
-        <button type="button" class="route-primary"
+        <button type="button" class="route-secondary"
           [disabled]="!currentRoute()||currentRoute()!.stops.length>=12"
-          (click)="newStop()">+ ADD WAYPOINT</button>
+          (click)="newStop()">+ WAYPOINT</button>
+        <button type="button" class="route-primary" (click)="openPrediction()">+ TARGET</button>
+      </footer>
+    }@else if(screen()==='prediction'){
+      <div class="route-scroll route-target-window">
+        @if(currentRoute();as route){
+          <p class="route-help">Predict {{route.targetLabel||'a moving target'}} at an in-game impact time using this saved route. Positions outside the reported timetable are not extrapolated.</p>
+          <label class="route-field"><span>IMPACT POINT / GAME TIME</span>
+            <select [value]="impactMode()" (change)="impactMode.set($any($event.target).value)">
+              @for(stop of route.stops;track stop.id;let i=$index){
+                <option [value]="i">{{stop.name}} · {{stop.time||'NO TIME'}}</option>
+              }
+              <option value="custom">Custom impact game time</option>
+            </select>
+          </label>
+          @if(impactMode()==='custom'){
+            <label class="route-field"><span>IMPACT CLOCK · HH:MM:SS</span>
+              <input type="text" inputmode="numeric" placeholder="11:02:30"
+                [value]="customImpactClock()" (input)="customImpactClock.set($any($event.target).value)">
+            </label>
+          }
+          @if(prediction();as result){
+            @if(result.ok){
+              <div class="route-prediction-position">
+                <span>PREDICTED TARGET POSITION</span>
+                <strong>{{result.result.grid??'OUTSIDE MAP'}}</strong>
+                <small>{{impactClock()}} · {{result.result.kmFromStation | number:'1.2-2'}} km to arrival</small>
+              </div>
+              <div class="route-prediction-metrics">
+                <div><span>BEARING</span><strong>{{result.result.bearingFromNest | number:'1.2-2'}}°</strong></div>
+                <div><span>RANGE</span><strong>{{result.result.rangeKm | number:'1.2-2'}} km</strong></div>
+                <div><span>CHARGES</span><strong>{{predictionCharge()??'—'}}</strong></div>
+                <div><span>ELEVATION</span>
+                  <strong>{{predictionElevation()!==null?(predictionElevation() | number:'1.2-2'):'—'}}°</strong>
+                </div>
+              </div>
+              @if(!result.result.grid){<p class="route-error">Target is outside the tactical map.</p>}
+              @if(predictionCharge()===null){<p class="route-error">Target is outside the 0–30 km firing range.</p>}
+            }@else{
+              <p class="route-error" role="status">{{result.error}}</p>
+            }
+          }
+          <div class="route-timing-field">
+            <span class="route-eyebrow">FIRING TIME · ESTIMATED</span>
+            <p class="route-help">The shell flight model is experimental; enter measured in-game flight time to override it.</p>
+            <label class="route-field"><span>MEASURED FLIGHT TIME · SECONDS (OPTIONAL)</span>
+              <input type="text" inputmode="decimal" placeholder="Estimate if left empty"
+                [value]="measuredFlight()" (input)="measuredFlight.set($any($event.target).value)">
+            </label>
+            @if(predictedFireTime();as fireTime){
+              <div class="route-prediction-position">
+                <span>FIRE AT GAME TIME</span>
+                <strong>{{fireTime.display}}</strong>
+                @if(fireTime.previousDay){<small>Previous game day</small>}
+              </div>
+            }@else{<p class="route-help">Firing time not calculated.</p>}
+          </div>
+          <div class="route-field-pair">
+            <label class="route-field"><span>SHELL TYPE</span>
+              <select [value]="predictionShell()" (change)="predictionShell.set($any($event.target).value)">
+                @for(shell of shellOptions;track shell){<option [value]="shell">{{shell}}</option>}
+              </select>
+            </label>
+            <label class="route-field"><span>CANNON</span>
+              <select [value]="predictionCannon()" (change)="setPredictionCannon($any($event.target).value)">
+                <option value="left">Left cannon</option>
+                <option value="right">Right cannon</option>
+              </select>
+            </label>
+          </div>
+          <p class="route-help">Confirm creates a target on the map and its firing solution. The target is a snapshot of this prediction, not a continuously moving marker.</p>
+          @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
+        }
+      </div>
+      <footer class="route-window-foot">
+        <button type="button" class="route-secondary" (click)="back()">Back</button>
+        <button type="button" class="route-primary"
+          [disabled]="!canCreateRouteTarget()" (click)="confirmRouteTarget()">ADD TARGET</button>
       </footer>
     }@else if(screen()==='editor'){
       <div class="route-scroll">

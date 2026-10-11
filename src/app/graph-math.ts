@@ -35,6 +35,10 @@ export interface IntelNode {
   grid?:GridInput;
   reports:IntelReport[];
   chosenCandidate?:number|null;
+  /** Snapshot metadata from a saved moving-target route prediction. */
+  sourceRouteId?:string;
+  sourceRouteName?:string;
+  routeImpactClock?:string;
 }
 export type PlotStatus = 'located'|'ambiguous'|'missing'|'conflict'|'blocked';
 export interface PlotNode {

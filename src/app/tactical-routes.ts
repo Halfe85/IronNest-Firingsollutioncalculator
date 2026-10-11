@@ -1,6 +1,6 @@
 import {formatGrid,parseGrid,type Point} from './map-math';
 import {resolveWaypointPositions} from './waypoint-geometry';
-import {type TrainStop,type NamedRouteReference} from './train-math';
+import {trainPositionAt,type TrainSchedule,type TrainStop,type NamedRouteReference} from './train-math';
 
 export interface TacticalRoute {
   id:string;
@@ -30,17 +30,26 @@ export function resolvedArrival(route:TacticalRoute,origins:readonly TacticalRou
   if(!route.stationReferenceId)return route.stationGrid;
   return origins.find(o=>o.id===route.stationReferenceId)?.grid??'';
 }
-export function routeGeometry(route:TacticalRoute,origins:readonly TacticalRouteOrigin[],nestGrid:string){
+export function routeSchedule(route:TacticalRoute,
+  origins:readonly TacticalRouteOrigin[],nestGrid:string):TrainSchedule {
   const references:NamedRouteReference[]=[
     ...(route.references??[]),
     ...origins.map(o=>({id:o.id,name:o.name,grid:o.grid}))
   ];
-  return resolveWaypointPositions({
+  return {
     nestGrid,stationGrid:resolvedArrival(route,origins),
     railBearing:route.railBearing.trim()?Number(route.railBearing.replace(',','.')):NaN,
     approachSide:route.approachSide,
     references,stops:route.stops
-  });
+  };
+}
+export function routeGeometry(route:TacticalRoute,origins:readonly TacticalRouteOrigin[],nestGrid:string){
+  return resolveWaypointPositions(routeSchedule(route,origins,nestGrid));
+}
+/** Reuse the existing no-extrapolation timing model for route-based target prediction. */
+export function predictRouteAt(route:TacticalRoute,origins:readonly TacticalRouteOrigin[],
+  nestGrid:string,impactClock:string){
+  return trainPositionAt(routeSchedule(route,origins,nestGrid),impactClock);
 }
 export function routeOverlay(routes:readonly TacticalRoute[],
   origins:readonly TacticalRouteOrigin[],nestGrid:string):TacticalRouteOverlay {

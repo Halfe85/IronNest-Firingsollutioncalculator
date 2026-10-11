@@ -88,3 +88,34 @@ button:focus-visible{outline:2px solid #f4dcaf;outline-offset:2px}
 @media(max-height:510px) and (orientation:landscape){
  .route-planner-window{height:100dvh;max-height:100dvh;border-radius:0}
 }
+
+/* Route-backed target window: game timing and computed firing data are separate. */
+.route-three-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.route-three-actions button{min-width:0;padding:8px}
+.route-prediction-position{
+  display:grid;gap:7px;padding:14px 12px;margin:12px 0;
+  text-align:center;border:1px solid #856d48;border-radius:8px;background:#302c1f
+}
+.route-prediction-position span{
+  color:#e7c591;font-size:10px;font-weight:850;letter-spacing:.8px
+}
+.route-prediction-position strong{
+  color:#f5d59d;font-size:26px;line-height:1.2;overflow-wrap:anywhere
+}
+.route-prediction-position small{color:#d3c6ac;font-size:11px}
+.route-prediction-metrics{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px
+}
+.route-prediction-metrics>div{
+  display:grid;gap:5px;padding:12px;background:#14251a;
+  border:1px solid #53674c;border-radius:7px
+}
+.route-prediction-metrics span{font-size:9px;color:#b0c4ac;font-weight:900}
+.route-prediction-metrics strong{
+  color:#f5e6c7;font-size:20px;font-variant-numeric:tabular-nums
+}
+@media(max-width:420px){
+ .route-three-actions{gap:5px}
+ .route-three-actions button{font-size:10px;padding:6px 4px}
+ .route-prediction-metrics strong{font-size:18px}
+}
