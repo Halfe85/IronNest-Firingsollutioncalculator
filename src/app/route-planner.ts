@@ -54,6 +54,16 @@ export class RoutePlannerComponent {
     return !!draft?.name.trim()&&!!parseGrid(resolvedArrival(draft,this.originsState()));
   });
   readonly stopGrid=computed(()=>gridInputFromText(this.stopDraft()?.grid??'')??EMPTY_GRID);
+  readonly editingArrival=computed(()=>{
+    const route=this.currentRoute(),stop=this.stopDraft();
+    return !!route&&!!stop&&route.stops[route.stops.length-1].id===stop.id;
+  });
+  readonly canDeleteStop=computed(()=>{
+    const route=this.currentRoute(),stop=this.stopDraft();
+    if(!route||!stop||route.stops.length<=2)return false;
+    const index=route.stops.findIndex(s=>s.id===stop.id);
+    return index>=0&&index<route.stops.length-1;
+  });
   readonly sourceOptions=computed(()=>{
     const route=this.currentRoute();
     if(!route)return [];

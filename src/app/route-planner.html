@@ -158,7 +158,7 @@
               <span>DISTANCE TO ARRIVAL · KM</span>
               <input type="text" inputmode="decimal"
                 [value]="stop.kmFromStation"
-                [disabled]="currentRoute()?.stops?.[currentRoute()!.stops.length-1]?.id===stop.id"
+                [disabled]="editingArrival()"
                 (input)="setStopNumber('kmFromStation',$any($event.target).value)">
             </label>
             <label class="route-field">
@@ -167,7 +167,7 @@
                 [value]="stop.time" (input)="setStopText('time',$any($event.target).value)">
             </label>
           </div>
-          @if(currentRoute()?.stops?.[currentRoute()!.stops.length-1]?.id!==stop.id){
+          @if(!editingArrival()){
             <label class="route-field">
               <span>POSITION METHOD</span>
               <select [value]="stop.method??'route'"
@@ -248,9 +248,7 @@
             </div>
           }
           @if(error()){<p class="route-error" role="alert">{{error()}}</p>}
-          @if(currentRoute() && currentRoute()!.stops.length>2 &&
-             currentRoute()!.stops[currentRoute()!.stops.length-1].id!==stop.id &&
-             currentRoute()!.stops.some(s=>s.id===stop.id)){
+          @if(canDeleteStop()){
             <button type="button" class="route-delete" (click)="deleteStop()">Delete waypoint</button>
           }
         }
