@@ -123,13 +123,13 @@ test('elevation displays two decimals and bearing displays one across all views'
   const views=['app.html','tactical-plotter.html','train-tracker.html','route-planner.html'];
   for(const file of views){
     const template=readFileSync(new URL('./'+file,import.meta.url),'utf8');
-    const angleExpressions=[...template.matchAll(/\\{\\{([^}]+)\\}\\}/g)].map(match=>match[1]);
+    const angleExpressions=[...template.matchAll(/\{\{([^}]+)\}\}/g)].map(match=>match[1]);
     for(const expression of angleExpressions){
-      if(/\\b(?:bearing|bearingFromNest)\\b/i.test(expression)&&/\\|\\s*number:/.test(expression))
-        assert.match(expression,/\\|\\s*number:'1\\.1-1'/,
+      if(/\b(?:bearing|bearingFromNest)\b/i.test(expression)&&/\|\s*number:/.test(expression))
+        assert.match(expression,/\|\s*number:'1\.1-1'/,
           file+' should display all bearings with one decimal');
-      if(/\\b(?:elevation|predictionElevation)\\b/i.test(expression)&&/\\|\\s*number:/.test(expression))
-        assert.match(expression,/\\|\\s*number:'1\\.2-2'/,
+      if(/\b(?:elevation|predictionElevation)\b/i.test(expression)&&/\|\s*number:/.test(expression))
+        assert.match(expression,/\|\s*number:'1\.2-2'/,
           file+' should display all elevations with two decimals');
     }
   }
