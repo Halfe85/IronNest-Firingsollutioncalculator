@@ -7,14 +7,14 @@
     </div>
   </header>
 
-  <main class="main-content" [class.shots-view]="tab()==='shots'">
+  <main class="main-content" [class.shots-view]="tab()==='shots'" [class.plot-view]="tab()==='plot'">
     <nav class="main-tabs" aria-label="Fire control modes">
       <button type="button" [class.active]="tab()==='calc'" (click)="selectTab('calc')">Calculate</button>
       <button type="button" [class.active]="tab()==='plot'" (click)="selectTab('plot')">Tactical Plotter</button>
       <button type="button" [class.active]="tab()==='shots'" (click)="selectTab('shots')">Fire Solutions <span class="tab-count">{{shots().length}}</span></button>
     </nav>
 
-    <div class="tab-content" [class.shots-tab-content]="tab()==='shots'">
+    <div class="tab-content" [class.shots-tab-content]="tab()==='shots'" [class.plot-tab-content]="tab()==='plot'">
       @if(tab()==='calc'){
         <section class="compact-calculator">
           <div class="calc-intro">
